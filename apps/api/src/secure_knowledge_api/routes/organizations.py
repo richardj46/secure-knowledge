@@ -1,8 +1,4 @@
-from typing import Annotated
-from uuid import UUID
-
-from fastapi import APIRouter, Depends, HTTPException, status
-
+from fastapi import APIRouter, HTTPException, status
 from secure_knowledge_core.organizations.schemas import (
     OrganizationCreate,
     OrganizationRead,
@@ -11,15 +7,14 @@ from secure_knowledge_core.organizations.service import (
     OrganizationService,
     OrganizationSlugAlreadyExistsError,
 )
-from secure_knowledge_api.dependencies.auth import get_current_user_id
+
+from secure_knowledge_api.dependencies.auth import CurrentUser
 from secure_knowledge_api.dependencies.database import DatabaseSession
 
 router = APIRouter(
     prefix="/organizations",
     tags=["organizations"],
 )
-
-CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
 
 
 @router.post(
@@ -29,14 +24,14 @@ CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
 )
 def create_organization(
     data: OrganizationCreate,
-    current_user_id: CurrentUserId,
+    current_user: CurrentUser,
     session: DatabaseSession,
 ) -> OrganizationRead:
     service = OrganizationService(session)
 
     try:
         organization = service.create_organization(
-            owner_user_id=current_user_id,
+            owner_user_id=current_user.id,
             data=data,
         )
     except OrganizationSlugAlreadyExistsError as exc:
@@ -50,13 +45,10 @@ def create_organization(
 
 @router.get("", response_model=list[OrganizationRead])
 def list_organizations(
-    current_user_id: CurrentUserId,
+    current_user: CurrentUser,
     session: DatabaseSession,
 ) -> list[OrganizationRead]:
     service = OrganizationService(session)
-    organizations = service.list_for_user(current_user_id)
+    organizations = service.list_for_user(current_user.id)
 
-    return [
-        OrganizationRead.model_validate(organization)
-        for organization in organizations
-    ]
+    return [OrganizationRead.model_validate(organization) for organization in organizations]

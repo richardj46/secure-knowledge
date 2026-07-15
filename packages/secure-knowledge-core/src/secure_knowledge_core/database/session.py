@@ -21,4 +21,9 @@ SessionFactory = sessionmaker(
 
 def get_session() -> Iterator[Session]:
     with SessionFactory() as session:
-        yield session
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise

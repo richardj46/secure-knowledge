@@ -26,24 +26,28 @@ class OrganizationService:
         owner_user_id: UUID,
         data: OrganizationCreate,
     ) -> Organization:
-        try:
-            with self.session.begin():
-                organization = Organization(
-                    name=data.name,
-                    slug=data.slug,
-                )
-                self.session.add(organization)
-                self.session.flush()
+        organization = Organization(
+            name=data.name,
+            slug=data.slug,
+        )
+        self.session.add(organization)
 
-                self.session.add(
-                    OrganizationMembership(
-                        organization_id=organization.id,
-                        user_id=owner_user_id,
-                        role=OrganizationRole.OWNER,
-                    )
-                )
+        try:
+            self.session.flush()
         except IntegrityError as exc:
+            # This flush only inserts the organization. Later membership
+            # constraint failures remain database errors instead of being
+            # mislabeled as slug conflicts.
             raise OrganizationSlugAlreadyExistsError from exc
+
+        self.session.add(
+            OrganizationMembership(
+                organization_id=organization.id,
+                user_id=owner_user_id,
+                role=OrganizationRole.OWNER,
+            )
+        )
+        self.session.flush()
 
         return organization
 
