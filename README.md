@@ -10,7 +10,7 @@ Production-grade permission-aware knowledge assistant monorepo.
 
 ## Shared package
 
-- `packages/secure_knowledge` — reusable Python modules shared by the API and worker
+- `packages/secure-knowledge-core` — reusable Python modules shared by the API and worker
 
 ## Local startup
 

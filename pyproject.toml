@@ -1,0 +1,65 @@
+[project]
+name = "secure-knowledge-workspace"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "secure-knowledge-api",
+  "secure-knowledge-worker",
+]
+
+[tool.uv]
+link-mode = "copy"
+
+[tool.uv.sources]
+secure-knowledge-api = { workspace = true }
+secure-knowledge-worker = { workspace = true }
+
+[tool.uv.workspace]
+members = [
+  "apps/api",
+  "apps/worker",
+  "packages/secure-knowledge-core"
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "mypy>=2.3.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.15.21",
+]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "apps/api/tests",
+    "apps/worker/tests",
+    "tests",
+]
+addopts = "-ra --import-mode=importlib"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "B",
+    "UP",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+packages = [
+    "secure_knowledge",
+    "secure_knowledge_api",
+    "secure_knowledge_worker",
+]
