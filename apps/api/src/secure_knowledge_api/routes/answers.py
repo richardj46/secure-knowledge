@@ -15,6 +15,7 @@ from secure_knowledge_core.answers.schemas import (
     AnswerRequest,
     AnswerResponse,
 )
+from secure_knowledge_core.llm.exceptions import LLMProviderError
 from secure_knowledge_core.retrieval.exceptions import OrganizationNotFoundError
 
 router = APIRouter(tags=["answers"])
@@ -52,6 +53,11 @@ def answer_question(
             detail="The answer provider returned invalid citations.",
         ) from exc
     except AnswerGenerationFailedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Answer generation is temporarily unavailable.",
+        ) from exc
+    except LLMProviderError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Answer generation is temporarily unavailable.",

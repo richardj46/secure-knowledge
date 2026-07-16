@@ -1,10 +1,11 @@
 from uuid import UUID, uuid4
 
 import pytest
+from pydantic import ValidationError
 
+from secure_knowledge_core.answers.exceptions import CitationValidationError
 from secure_knowledge_core.database.enums import Answerability
 from secure_knowledge_core.llm.citations import validate_citations
-from secure_knowledge_core.llm.exceptions import CitationValidationError
 from secure_knowledge_core.llm.schemas import CitationDraft, GeneratedAnswer
 
 
@@ -56,21 +57,17 @@ def test_duplicate_chunk_citation_is_rejected() -> None:
 
 
 def test_answerable_response_requires_a_valid_citation() -> None:
-    answer = generated_answer(
-        answerability=Answerability.ANSWERABLE,
-        chunk_ids=[],
-    )
-
-    with pytest.raises(CitationValidationError, match="must include"):
-        validate_citations(answer=answer, allowed_chunk_ids=set())
+    with pytest.raises(ValidationError, match="must include citations"):
+        generated_answer(
+            answerability=Answerability.ANSWERABLE,
+            chunk_ids=[],
+        )
 
 
 def test_not_found_response_rejects_citations() -> None:
     chunk_id = uuid4()
-    answer = generated_answer(
-        answerability=Answerability.NOT_FOUND,
-        chunk_ids=[chunk_id],
-    )
-
-    with pytest.raises(CitationValidationError, match="cannot include"):
-        validate_citations(answer=answer, allowed_chunk_ids={chunk_id})
+    with pytest.raises(ValidationError, match="must not contain citations"):
+        generated_answer(
+            answerability=Answerability.NOT_FOUND,
+            chunk_ids=[chunk_id],
+        )

@@ -1,21 +1,37 @@
-from secure_knowledge_core.answers.exceptions import CitationValidationError
+class LLMProviderError(Exception):
+    """Base model-provider error."""
 
 
-class AnswerProviderError(Exception):
-    """The configured provider could not generate a usable answer."""
+class LLMProviderConfigurationError(LLMProviderError):
+    pass
 
 
-class AnswerProviderConfigurationError(AnswerProviderError):
-    """The answer provider is not configured."""
+class LLMProviderTimeoutError(LLMProviderError):
+    pass
 
 
-class InvalidGeneratedAnswerError(AnswerProviderError):
-    """The provider returned an invalid or unsafe structured answer."""
+class LLMProviderRateLimitError(LLMProviderError):
+    pass
+
+
+class LLMProviderUnavailableError(LLMProviderError):
+    pass
+
+
+class LLMInvalidStructuredOutputError(LLMProviderError):
+    pass
+
+
+class LLMRefusalError(LLMProviderError):
+    pass
 
 
 __all__ = [
-    "AnswerProviderConfigurationError",
-    "AnswerProviderError",
-    "CitationValidationError",
-    "InvalidGeneratedAnswerError",
+    "LLMInvalidStructuredOutputError",
+    "LLMProviderConfigurationError",
+    "LLMProviderError",
+    "LLMProviderRateLimitError",
+    "LLMProviderTimeoutError",
+    "LLMProviderUnavailableError",
+    "LLMRefusalError",
 ]

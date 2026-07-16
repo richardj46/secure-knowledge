@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import (
@@ -7,7 +6,6 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
-    Numeric,
     String,
     Uuid,
 )
@@ -54,6 +52,17 @@ class AnswerRun(IdMixin, TimestampMixin, Base):
         index=True,
     )
 
+    provider: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    provider_request_id: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        index=True,
+    )
+
     model_name: Mapped[str] = mapped_column(
         String(200),
         nullable=False,
@@ -69,33 +78,38 @@ class AnswerRun(IdMixin, TimestampMixin, Base):
         nullable=True,
     )
 
-    prompt_tokens: Mapped[int | None] = mapped_column(
+    input_tokens: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
 
-    completion_tokens: Mapped[int | None] = mapped_column(
+    output_tokens: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
 
-    latency_ms: Mapped[int | None] = mapped_column(
+    total_tokens: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
 
-    estimated_cost: Mapped[Decimal | None] = mapped_column(
-        Numeric(14, 8),
+    estimated_cost_microusd: Mapped[int | None] = mapped_column(
+        Integer,
         nullable=True,
     )
 
-    generation_status: Mapped[AnswerGenerationStatus] = mapped_column(
+    generation_duration_ms: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    status: Mapped[AnswerGenerationStatus] = mapped_column(
         ANSWER_GENERATION_STATUS_ENUM,
         nullable=False,
         default=AnswerGenerationStatus.PENDING,
     )
 
-    error_code: Mapped[str | None] = mapped_column(
+    failure_code: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
     )

@@ -6,7 +6,7 @@ from secure_knowledge_core.answers.schemas import GeneratedAnswer
 from secure_knowledge_core.core.settings import get_settings
 from secure_knowledge_core.database.enums import Answerability
 from secure_knowledge_core.llm.abstention import AbstentionPolicy
-from secure_knowledge_core.llm.interface import AnswerProvider
+from secure_knowledge_core.llm.interface import AnswerProvider, ModelUsage
 from secure_knowledge_core.retrieval.schemas import RetrievalResult
 
 
@@ -14,6 +14,8 @@ from secure_knowledge_core.retrieval.schemas import RetrievalResult
 class AnswerGenerationResult:
     answer: GeneratedAnswer
     model_name: str
+    provider_request_id: str | None
+    usage: ModelUsage | None
     provider_called: bool
     allowed_chunk_ids: frozenset[UUID]
 
@@ -69,6 +71,8 @@ class AnswerGenerationService:
                     limitations=[decision.reason],
                 ),
                 model_name="abstention-policy",
+                provider_request_id=None,
+                usage=None,
                 provider_called=False,
                 allowed_chunk_ids=frozenset(),
             )
@@ -76,18 +80,15 @@ class AnswerGenerationService:
         allowed_chunk_ids = frozenset(
             result.chunk_id for result in decision.passages
         )
+        provider_result = self.provider.generate_answer(
+            question=question,
+            context=build_context_passages(decision.passages),
+        )
         return AnswerGenerationResult(
-            answer=self.provider.generate_answer(
-                question=question,
-                context=build_context_passages(decision.passages),
-            ),
-            model_name=self._provider_model_name(),
+            answer=provider_result.generated_answer,
+            model_name=provider_result.model_name,
+            provider_request_id=provider_result.provider_request_id,
+            usage=provider_result.usage,
             provider_called=True,
             allowed_chunk_ids=allowed_chunk_ids,
         )
-
-    def _provider_model_name(self) -> str:
-        model = getattr(self.provider, "model", None)
-        if isinstance(model, str) and model:
-            return model
-        return type(self.provider).__name__

@@ -3,6 +3,10 @@ from uuid import uuid4
 from secure_knowledge_core.database.enums import Answerability
 from secure_knowledge_core.llm.abstention import AbstentionPolicy
 from secure_knowledge_core.llm.context import ContextPassage
+from secure_knowledge_core.llm.interface import (
+    AnswerProviderResult,
+    ModelUsage,
+)
 from secure_knowledge_core.llm.schemas import CitationDraft, GeneratedAnswer
 from secure_knowledge_core.llm.service import AnswerGenerationService
 from secure_knowledge_core.retrieval.schemas import RetrievalResult
@@ -17,19 +21,28 @@ class RecordingAnswerProvider:
         *,
         question: str,
         context: list[ContextPassage],
-    ) -> GeneratedAnswer:
+    ) -> AnswerProviderResult:
         del question
         self.calls += 1
-        return GeneratedAnswer(
-            answer="Supported answer.",
-            answerability=Answerability.ANSWERABLE,
-            confidence=0.8,
-            citations=[
-                CitationDraft(
-                    chunk_id=context[0].chunk_id,
-                    claims=["Supported answer."],
-                )
-            ],
+        return AnswerProviderResult(
+            generated_answer=GeneratedAnswer(
+                answer="Supported answer.",
+                answerability=Answerability.ANSWERABLE,
+                confidence=0.8,
+                citations=[
+                    CitationDraft(
+                        chunk_id=context[0].chunk_id,
+                        claims=["Supported answer."],
+                    )
+                ],
+            ),
+            model_name="recording-answer-model",
+            provider_request_id="recording-request-id",
+            usage=ModelUsage(
+                input_tokens=10,
+                output_tokens=4,
+                total_tokens=14,
+            ),
         )
 
 
@@ -132,10 +145,17 @@ def test_supported_results_are_sent_to_provider() -> None:
         abstention_policy=policy(),
     )
 
-    answer = service.generate(
+    generation = service.generate_with_metadata(
         question="Question?",
         retrieval_results=[result()],
     )
 
-    assert answer.answerability is Answerability.ANSWERABLE
+    assert generation.answer.answerability is Answerability.ANSWERABLE
+    assert generation.model_name == "recording-answer-model"
+    assert generation.provider_request_id == "recording-request-id"
+    assert generation.usage == ModelUsage(
+        input_tokens=10,
+        output_tokens=4,
+        total_tokens=14,
+    )
     assert provider.calls == 1

@@ -53,18 +53,34 @@ class AnswerRepository:
         conversation_id: UUID,
         retrieval_run_id: UUID,
         generation: AnswerGenerationResult,
-        latency_ms: int,
+        generation_duration_ms: int,
     ) -> AnswerRun:
         answer_run = AnswerRun(
             organization_id=organization_id,
             user_id=user_id,
             conversation_id=conversation_id,
             retrieval_run_id=retrieval_run_id,
+            provider_request_id=generation.provider_request_id,
             model_name=generation.model_name,
             answerability=generation.answer.answerability,
             confidence=generation.answer.confidence,
-            latency_ms=latency_ms,
-            generation_status=AnswerGenerationStatus.COMPLETED,
+            input_tokens=(
+                generation.usage.input_tokens
+                if generation.usage is not None
+                else None
+            ),
+            output_tokens=(
+                generation.usage.output_tokens
+                if generation.usage is not None
+                else None
+            ),
+            total_tokens=(
+                generation.usage.total_tokens
+                if generation.usage is not None
+                else None
+            ),
+            generation_duration_ms=generation_duration_ms,
+            status=AnswerGenerationStatus.COMPLETED,
         )
         self.session.add(answer_run)
         self.session.flush()
