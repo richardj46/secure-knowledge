@@ -14,10 +14,11 @@ jobs:
       OBJECT_STORAGE_ACCESS_KEY: not-used
       OBJECT_STORAGE_SECRET_KEY: not-used
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: true
+          version: "0.11.28"
       - run: uv python install 3.12
       - run: uv sync --locked --dev
       - run: uv run pytest -m evaluation
@@ -31,10 +32,11 @@ jobs:
       OBJECT_STORAGE_ACCESS_KEY: not-used
       OBJECT_STORAGE_SECRET_KEY: not-used
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: true
+          version: "0.11.28"
       - run: uv python install 3.12
       - run: uv sync --locked --dev
       - run: uv run pytest -m security
