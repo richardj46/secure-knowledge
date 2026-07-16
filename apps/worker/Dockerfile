@@ -8,4 +8,4 @@ COPY apps/worker /app
 RUN pip install --no-cache-dir /packages/secure-knowledge-core
 RUN pip install --no-cache-dir .
 
-CMD ["python", "-m", "src.main"]
+CMD ["celery", "-A", "secure_knowledge_worker.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]

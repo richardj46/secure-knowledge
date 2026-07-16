@@ -24,10 +24,24 @@ class DocumentVisibility(StrEnum):
 
 class DocumentStatus(StrEnum):
     PENDING = "pending"
-    PROCESSING = "processing"
+    STORED = "stored"
+    QUEUED = "queued"
+    EXTRACTING = "extracting"
+    CHUNKING = "chunking"
+    EMBEDDING = "embedding"
     READY = "ready"
     FAILED = "failed"
     DELETED = "deleted"
+
+
+class DocumentVersionStatus(StrEnum):
+    PENDING = "pending"
+    QUEUED = "queued"
+    EXTRACTING = "extracting"
+    CHUNKING = "chunking"
+    EMBEDDING = "embedding"
+    READY = "ready"
+    FAILED = "failed"
 
 
 class DocumentPermissionLevel(StrEnum):

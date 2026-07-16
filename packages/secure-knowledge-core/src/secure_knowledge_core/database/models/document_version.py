@@ -1,11 +1,21 @@
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint, Uuid
+from sqlalchemy import (
+    DateTime,
+    Enum,
+    ForeignKey,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from secure_knowledge_core.database.base import Base
+from secure_knowledge_core.database.enums import DocumentVersionStatus
 from secure_knowledge_core.database.mixins import IdMixin, TimestampMixin
 
 
@@ -42,10 +52,50 @@ class DocumentVersion(IdMixin, TimestampMixin, Base):
         nullable=False,
     )
 
-    extraction_status: Mapped[str] = mapped_column(
-        String(50),
+    file_size_bytes: Mapped[int] = mapped_column(
         nullable=False,
-        default="pending",
+    )
+
+    status: Mapped[DocumentVersionStatus] = mapped_column(
+        Enum(
+            DocumentVersionStatus,
+            name="document_version_status",
+            native_enum=True,
+        ),
+        nullable=False,
+        default=DocumentVersionStatus.PENDING,
+    )
+
+    page_count: Mapped[int | None] = mapped_column(
+        nullable=True,
+    )
+
+    extracted_character_count: Mapped[int | None] = mapped_column(
+        nullable=True,
+    )
+
+    chunk_count: Mapped[int | None] = mapped_column(
+        nullable=True,
+    )
+
+    processing_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    processing_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    failure_code: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    failure_message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
     )
 
     document: Mapped["Document"] = relationship(

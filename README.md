@@ -337,6 +337,15 @@ http://localhost:8000/docs
 
 ## Development commands
 
+Run the ingestion worker locally:
+
+```bash
+uv run celery \
+  -A secure_knowledge_worker.celery_app:celery_app \
+  worker \
+  --loglevel=INFO
+```
+
 Run tests:
 
 ```bash

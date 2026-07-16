@@ -49,7 +49,7 @@ def upgrade() -> None:
     sa.Column('slug', sa.String(length=150), nullable=False),
     sa.Column('source_filename', sa.String(length=500), nullable=False),
     sa.Column('mime_type', sa.String(length=150), nullable=False),
-    sa.Column('storage_key', sa.String(length=1000), nullable=True),
+    sa.Column('storage_key', sa.String(length=1000), nullable=False),
     sa.Column('visibility', sa.Enum('ORGANIZATION', 'WORKSPACE', 'RESTRICTED', 'OWNER', name='document_visibility'), nullable=False),
     sa.Column('status', sa.Enum('PENDING', 'PROCESSING', 'READY', 'FAILED', 'DELETED', name='document_status'), nullable=False),
     sa.Column('current_version_number', sa.Integer(), nullable=False),

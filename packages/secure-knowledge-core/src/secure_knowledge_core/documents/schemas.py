@@ -5,19 +5,20 @@ from pydantic import BaseModel, ConfigDict, Field
 from secure_knowledge_core.database.enums import (
     DocumentPermissionLevel,
     DocumentStatus,
+    DocumentVersionStatus,
     DocumentVisibility,
 )
 
 
-class DocumentCreate(BaseModel):
+class DocumentUploadMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     title: str = Field(min_length=1, max_length=300)
     slug: str = Field(
         min_length=2,
         max_length=150,
         pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
     )
-    source_filename: str = Field(min_length=1, max_length=500)
-    mime_type: str = Field(min_length=1, max_length=150)
     visibility: DocumentVisibility = DocumentVisibility.WORKSPACE
 
 
@@ -35,6 +36,20 @@ class DocumentRead(BaseModel):
     visibility: DocumentVisibility
     status: DocumentStatus
     current_version_number: int
+
+
+class DocumentVersionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    document_id: UUID
+    version_number: int
+    status: DocumentVersionStatus
+    file_size_bytes: int
+    page_count: int | None
+    chunk_count: int | None
+    failure_code: str | None
+    failure_message: str | None
 
 
 class DocumentUserPermissionAdd(BaseModel):

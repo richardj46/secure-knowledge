@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, aliased
 from secure_knowledge_core.database.enums import (
     DocumentPermissionLevel,
     DocumentStatus,
+    DocumentVersionStatus,
     DocumentVisibility,
     OrganizationRole,
     WorkspaceRole,
@@ -15,16 +16,20 @@ from secure_knowledge_core.database.models import (
     Document,
     DocumentGroupPermission,
     DocumentUserPermission,
+    DocumentVersion,
     Group,
     GroupMembership,
     OrganizationMembership,
+    OutboxEvent,
     Workspace,
     WorkspaceMembership,
 )
 from secure_knowledge_core.documents.schemas import (
-    DocumentCreate,
     DocumentGroupPermissionAdd,
     DocumentUserPermissionAdd,
+)
+from secure_knowledge_core.outbox.service import (
+    DOCUMENT_VERSION_INGESTION_REQUESTED,
 )
 
 
@@ -33,6 +38,14 @@ class WorkspaceNotFoundError(Exception):
 
 
 class DocumentNotFoundError(Exception):
+    pass
+
+
+class DocumentVersionNotFoundError(Exception):
+    pass
+
+
+class DocumentVersionNotRetryableError(Exception):
     pass
 
 
@@ -64,44 +77,6 @@ class DocumentService:
 
     def __init__(self, session: Session) -> None:
         self.session = session
-
-    def create_document(
-        self,
-        *,
-        workspace_id: UUID,
-        actor_user_id: UUID,
-        data: DocumentCreate,
-    ) -> Document:
-        workspace, organization_role, workspace_role = self._get_workspace_access(
-            workspace_id=workspace_id,
-            actor_user_id=actor_user_id,
-        )
-        if organization_role not in self._organization_managers and (
-            workspace_role is not WorkspaceRole.MANAGER
-        ):
-            raise DocumentPermissionDeniedError
-
-        document = Document(
-            organization_id=workspace.organization_id,
-            workspace_id=workspace.id,
-            owner_user_id=actor_user_id,
-            title=data.title,
-            slug=data.slug,
-            source_filename=data.source_filename,
-            mime_type=data.mime_type,
-            storage_key=None,
-            visibility=data.visibility,
-            status=DocumentStatus.PENDING,
-            current_version_number=1,
-        )
-        self.session.add(document)
-
-        try:
-            self.session.flush()
-        except IntegrityError as exc:
-            raise DocumentSlugAlreadyExistsError from exc
-
-        return document
 
     def list_documents(
         self,
@@ -139,6 +114,110 @@ class DocumentService:
             raise DocumentNotFoundError
 
         return document
+
+    def list_document_versions(
+        self,
+        *,
+        document_id: UUID,
+        actor_user_id: UUID,
+    ) -> list[DocumentVersion]:
+        versions = list(
+            self.session.scalars(
+                select(DocumentVersion)
+                .join(Document, Document.id == DocumentVersion.document_id)
+                .where(
+                    DocumentVersion.document_id == document_id,
+                    self.authorized_document_condition(actor_user_id),
+                )
+                .order_by(DocumentVersion.version_number)
+            )
+        )
+        if not versions:
+            # Preserve an empty version history for legacy metadata-only
+            # documents while still hiding nonexistent or unauthorized ones.
+            self.get_document(
+                document_id=document_id,
+                actor_user_id=actor_user_id,
+            )
+
+        return versions
+
+    def get_document_version(
+        self,
+        *,
+        version_id: UUID,
+        actor_user_id: UUID,
+    ) -> DocumentVersion:
+        version = self.session.scalar(
+            select(DocumentVersion)
+            .join(Document, Document.id == DocumentVersion.document_id)
+            .where(
+                DocumentVersion.id == version_id,
+                self.authorized_document_condition(actor_user_id),
+            )
+        )
+        if version is None:
+            raise DocumentVersionNotFoundError
+
+        return version
+
+    def retry_document_version(
+        self,
+        *,
+        version_id: UUID,
+        actor_user_id: UUID,
+    ) -> DocumentVersion:
+        actor_organization_membership = aliased(OrganizationMembership)
+        version = self.session.scalar(
+            select(DocumentVersion)
+            .join(Document, Document.id == DocumentVersion.document_id)
+            .join(
+                actor_organization_membership,
+                and_(
+                    actor_organization_membership.organization_id
+                    == Document.organization_id,
+                    actor_organization_membership.user_id == actor_user_id,
+                ),
+            )
+            .where(DocumentVersion.id == version_id)
+            .with_for_update(of=DocumentVersion)
+        )
+        if version is None:
+            raise DocumentVersionNotFoundError
+
+        document = self._get_manageable_document(
+            document_id=version.document_id,
+            actor_user_id=actor_user_id,
+        )
+        if version.status is not DocumentVersionStatus.FAILED:
+            raise DocumentVersionNotRetryableError
+
+        self.session.add(
+            OutboxEvent(
+                event_type=DOCUMENT_VERSION_INGESTION_REQUESTED,
+                aggregate_type="document_version",
+                aggregate_id=version.id,
+                payload={
+                    "document_version_id": str(version.id),
+                },
+            )
+        )
+        version.status = DocumentVersionStatus.QUEUED
+        version.failure_code = None
+        version.failure_message = None
+        version.processing_started_at = None
+        version.processing_completed_at = None
+        version.page_count = None
+        version.extracted_character_count = None
+        version.chunk_count = None
+
+        if document.current_version_number == version.version_number:
+            document.status = DocumentStatus.QUEUED
+
+        # The retry transition and durable job request must commit together.
+        self.session.commit()
+        self.session.refresh(version)
+        return version
 
     def add_user_permission(
         self,
