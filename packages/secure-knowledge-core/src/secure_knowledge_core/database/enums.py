@@ -1,5 +1,7 @@
 from enum import StrEnum
 
+from sqlalchemy import Enum
+
 
 class OrganizationRole(StrEnum):
     OWNER = "owner"
@@ -11,3 +13,31 @@ class WorkspaceRole(StrEnum):
     MANAGER = "manager"
     MEMBER = "member"
     VIEWER = "viewer"
+
+
+class DocumentVisibility(StrEnum):
+    ORGANIZATION = "organization"
+    WORKSPACE = "workspace"
+    RESTRICTED = "restricted"
+    OWNER = "owner"
+
+
+class DocumentStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    READY = "ready"
+    FAILED = "failed"
+    DELETED = "deleted"
+
+
+class DocumentPermissionLevel(StrEnum):
+    VIEWER = "viewer"
+    EDITOR = "editor"
+    MANAGER = "manager"
+
+
+DOCUMENT_PERMISSION_LEVEL_ENUM = Enum(
+    DocumentPermissionLevel,
+    name="document_permission_level",
+    native_enum=True,
+)
