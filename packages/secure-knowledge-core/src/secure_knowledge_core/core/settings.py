@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     embedding_model: str = "gemini-embedding-001"
     embedding_dimensions: int = 1536
+    gemini_answer_model: str = "gemini-2.5-flash"
+    answer_minimum_retrieval_score: float = 0.015
+    answer_minimum_vector_similarity: float = 0.55
+    answer_minimum_passage_characters: int = 40
+    answer_retrieval_limit: int = 10
 
     max_upload_size_bytes: int = 20 * 1024 * 1024
     ingestion_lease_seconds: int = 15 * 60

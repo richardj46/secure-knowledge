@@ -16,6 +16,8 @@ class FusedChunk:
     fused_score: float = 0.0
     vector_rank: int | None = None
     keyword_rank: int | None = None
+    vector_score: float | None = None
+    keyword_score: float | None = None
 
 
 def normalize_for_deduplication(text: str) -> str:
@@ -62,6 +64,7 @@ def reciprocal_rank_fusion(
         )
 
         item.vector_rank = result.rank
+        item.vector_score = result.score
         item.fused_score += 1.0 / (k + result.rank)
 
     for result in keyword_results:
@@ -78,6 +81,7 @@ def reciprocal_rank_fusion(
         )
 
         item.keyword_rank = result.rank
+        item.keyword_score = result.score
         item.fused_score += 1.0 / (k + result.rank)
 
     return sorted(

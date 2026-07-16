@@ -29,8 +29,8 @@ from secure_knowledge_core.retrieval.schemas import (
 from secure_knowledge_core.retrieval.tracing import (
     DatabaseRetrievalTracer,
     RetrievalTrace,
-    RetrievalTraceResult,
     RetrievalTracer,
+    RetrievalTraceResult,
 )
 
 
@@ -110,6 +110,8 @@ class RetrievalService:
                     score=item.fused_score,
                     vector_rank=item.vector_rank,
                     keyword_rank=item.keyword_rank,
+                    vector_score=item.vector_score,
+                    keyword_score=item.keyword_score,
                     retrieval_sources=[
                         source
                         for source, rank in (
@@ -122,7 +124,7 @@ class RetrievalService:
                 for item in results
             ],
         )
-        self.tracer.record(
+        retrieval_run_id = self.tracer.record(
             RetrievalTrace(
                 organization_id=organization_id,
                 user_id=user_id,
@@ -145,6 +147,7 @@ class RetrievalService:
                 ],
             )
         )
+        response.attach_retrieval_run_id(retrieval_run_id)
         return response
 
     def _embedding_model_name(self) -> str:

@@ -32,7 +32,7 @@ class RetrievalTrace:
 
 
 class RetrievalTracer(Protocol):
-    def record(self, trace: RetrievalTrace) -> None:
+    def record(self, trace: RetrievalTrace) -> UUID | None:
         ...
 
 
@@ -40,7 +40,7 @@ class DatabaseRetrievalTracer:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def record(self, trace: RetrievalTrace) -> None:
+    def record(self, trace: RetrievalTrace) -> UUID:
         run = RetrievalRun(
             organization_id=trace.organization_id,
             user_id=trace.user_id,
@@ -71,3 +71,4 @@ class DatabaseRetrievalTracer:
             ]
         )
         self.session.flush()
+        return run.id

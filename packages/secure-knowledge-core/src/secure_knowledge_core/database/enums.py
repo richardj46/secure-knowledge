@@ -50,8 +50,46 @@ class DocumentPermissionLevel(StrEnum):
     MANAGER = "manager"
 
 
+class MessageRole(StrEnum):
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+
+
+class Answerability(StrEnum):
+    ANSWERABLE = "answerable"
+    PARTIALLY_ANSWERABLE = "partially_answerable"
+    NOT_FOUND = "not_found"
+    AMBIGUOUS = "ambiguous"
+
+
+class AnswerGenerationStatus(StrEnum):
+    PENDING = "pending"
+    GENERATING = "generating"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 DOCUMENT_PERMISSION_LEVEL_ENUM = Enum(
     DocumentPermissionLevel,
     name="document_permission_level",
+    native_enum=True,
+)
+
+MESSAGE_ROLE_ENUM = Enum(
+    MessageRole,
+    name="message_role",
+    native_enum=True,
+)
+
+ANSWERABILITY_ENUM = Enum(
+    Answerability,
+    name="answerability",
+    native_enum=True,
+)
+
+ANSWER_GENERATION_STATUS_ENUM = Enum(
+    AnswerGenerationStatus,
+    name="answer_generation_status",
     native_enum=True,
 )

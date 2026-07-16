@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class RetrievalSearchRequest(BaseModel):
@@ -19,9 +19,20 @@ class RetrievalResult(BaseModel):
     score: float
     vector_rank: int | None
     keyword_rank: int | None
+    vector_score: float | None = Field(default=None, exclude=True)
+    keyword_score: float | None = Field(default=None, exclude=True)
     retrieval_sources: list[str]
 
 
 class RetrievalSearchResponse(BaseModel):
+    _retrieval_run_id: UUID | None = PrivateAttr(default=None)
+
     query: str
     results: list[RetrievalResult]
+
+    @property
+    def retrieval_run_id(self) -> UUID | None:
+        return self._retrieval_run_id
+
+    def attach_retrieval_run_id(self, retrieval_run_id: UUID | None) -> None:
+        self._retrieval_run_id = retrieval_run_id
