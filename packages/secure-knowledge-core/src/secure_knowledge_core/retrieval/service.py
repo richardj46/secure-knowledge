@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
+from secure_knowledge_core.database.enums import ExecutionMode
 from secure_knowledge_core.database.models import OrganizationMembership, Workspace
 from secure_knowledge_core.ingestion.embeddings import EmbeddingProvider
 from secure_knowledge_core.ingestion.exceptions import (
@@ -43,6 +44,7 @@ class RetrievalService:
         authorization: RetrievalAuthorization | None = None,
         repository: RetrievalRepository | None = None,
         tracer: RetrievalTracer | None = None,
+        execution_mode: ExecutionMode = ExecutionMode.PRODUCTION,
     ) -> None:
         self.session = session
         self.embedding_provider = embedding_provider
@@ -50,6 +52,7 @@ class RetrievalService:
         self.query_embeddings = QueryEmbeddingService(embedding_provider)
         self.repository = repository or RetrievalRepository(session)
         self.tracer = tracer or DatabaseRetrievalTracer(session)
+        self.execution_mode = execution_mode
 
     def search(
         self,
@@ -141,6 +144,7 @@ class RetrievalService:
                     )
                     for rank, result in enumerate(retrieval_results, start=1)
                 ],
+                execution_mode=self.execution_mode,
             )
         )
         return RetrievalSearchResponse(

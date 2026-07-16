@@ -27,9 +27,11 @@ from secure_knowledge_core.answers.validation import (
 from secure_knowledge_core.conversations.repository import (
     ConversationRepository,
 )
+from secure_knowledge_core.core.settings import get_settings
 from secure_knowledge_core.database.enums import (
     Answerability,
     AnswerGenerationStatus,
+    ExecutionMode,
     MessageRole,
 )
 from secure_knowledge_core.database.models import (
@@ -37,6 +39,7 @@ from secure_knowledge_core.database.models import (
     AnswerRun,
     Conversation,
     Message,
+    RetrievalRun,
 )
 from secure_knowledge_core.llm.exceptions import (
     LLMInvalidStructuredOutputError,
@@ -52,6 +55,13 @@ from secure_knowledge_core.llm.pricing import CostCalculator
 from secure_knowledge_core.retrieval.authorization import RetrievalAuthorization
 from secure_knowledge_core.retrieval.schemas import RetrievalSearchRequest
 from secure_knowledge_core.retrieval.service import RetrievalService
+from secure_knowledge_core.versioning import (
+    ANSWER_PROMPT_VERSION,
+    AUTHORIZATION_POLICY_VERSION,
+    CHUNKING_VERSION,
+    GROUNDEDNESS_GRADER_VERSION,
+    RETRIEVAL_CONFIGURATION_VERSION,
+)
 
 
 class AnswerService:
@@ -64,6 +74,7 @@ class AnswerService:
         context_selector: ContextSelector,
         cost_calculator: CostCalculator,
         sufficiency_policy: RetrievalSufficiencyPolicy | None = None,
+        execution_mode: ExecutionMode = ExecutionMode.PRODUCTION,
     ) -> None:
         self.session = session
         self.retrieval_service = retrieval_service
@@ -76,6 +87,8 @@ class AnswerService:
         self.authorization = RetrievalAuthorization(session)
         self.conversations = ConversationRepository(session)
         self.answers = AnswerRepository(session)
+        self.execution_mode = execution_mode
+        self.retrieval_service.execution_mode = execution_mode
 
     def answer(
         self,
@@ -146,6 +159,7 @@ class AnswerService:
                 usage=None,
                 estimated_cost_microusd=None,
                 duration_ms=0,
+                execution_mode=self.execution_mode,
             )
 
         passages = [
@@ -179,6 +193,7 @@ class AnswerService:
                     retrieval_run_id=retrieval.retrieval_run_id,
                     failure_code=self._map_provider_failure(exc),
                     generation_duration_ms=duration_ms,
+                    execution_mode=self.execution_mode,
                 )
             except Exception:
                 self.session.rollback()
@@ -204,6 +219,7 @@ class AnswerService:
                     retrieval_run_id=retrieval.retrieval_run_id,
                     failure_code="citation_validation_failed",
                     generation_duration_ms=duration_ms,
+                    execution_mode=self.execution_mode,
                 )
             except Exception:
                 self.session.rollback()
@@ -229,6 +245,7 @@ class AnswerService:
             usage=provider_result.usage,
             estimated_cost_microusd=estimated_cost_microusd,
             duration_ms=duration_ms,
+            execution_mode=self.execution_mode,
         )
 
     def _resolve_conversation(
@@ -239,11 +256,19 @@ class AnswerService:
         conversation_id: UUID | None,
     ) -> Conversation:
         if conversation_id is not None:
-            conversation = self.conversations.get_for_user(
-                conversation_id=conversation_id,
-                organization_id=organization_id,
-                user_id=user_id,
-            )
+            if self.execution_mode == ExecutionMode.PRODUCTION:
+                conversation = self.conversations.get_for_user(
+                    conversation_id=conversation_id,
+                    organization_id=organization_id,
+                    user_id=user_id,
+                )
+            else:
+                conversation = self.conversations.get_internal_owned(
+                    conversation_id=conversation_id,
+                    organization_id=organization_id,
+                    user_id=user_id,
+                    execution_mode=self.execution_mode,
+                )
             if conversation is None:
                 raise ConversationAccessDeniedError
             return conversation
@@ -252,6 +277,8 @@ class AnswerService:
             organization_id=organization_id,
             user_id=user_id,
             title=None,
+            execution_mode=self.execution_mode,
+            is_evaluation=self.execution_mode == ExecutionMode.EVALUATION,
         )
         self.conversations.add_conversation(conversation)
         self.session.flush()
@@ -272,11 +299,14 @@ class AnswerService:
         usage: ModelUsage | None,
         estimated_cost_microusd: int | None,
         duration_ms: int,
+        execution_mode: ExecutionMode,
     ) -> AnswerResponse:
         passage_by_chunk_id = {
             passage.chunk_id: passage for passage in passages
         }
+        resolved_model_name = model_name or "abstention-policy"
         answer_run = AnswerRun(
+            execution_mode=execution_mode,
             organization_id=organization_id,
             user_id=user_id,
             conversation_id=conversation.id,
@@ -284,7 +314,17 @@ class AnswerService:
             provider=provider_name,
             provider_request_id=provider_request_id,
             status=AnswerGenerationStatus.COMPLETED,
-            model_name=model_name or "abstention-policy",
+            model_name=resolved_model_name,
+            answer_prompt_version=ANSWER_PROMPT_VERSION,
+            grader_prompt_version=GROUNDEDNESS_GRADER_VERSION,
+            answer_model=resolved_model_name,
+            embedding_model=self._embedding_model_for_run(retrieval_run_id),
+            reranker_model=get_settings().reranker_model,
+            chunking_version=CHUNKING_VERSION,
+            retrieval_configuration_version=(
+                RETRIEVAL_CONFIGURATION_VERSION
+            ),
+            authorization_policy_version=AUTHORIZATION_POLICY_VERSION,
             answerability=generated.answerability,
             confidence=generated.confidence,
             input_tokens=usage.input_tokens if usage is not None else None,
@@ -355,8 +395,10 @@ class AnswerService:
         retrieval_run_id: UUID,
         failure_code: str,
         generation_duration_ms: int,
+        execution_mode: ExecutionMode,
     ) -> None:
         answer_run = AnswerRun(
+            execution_mode=execution_mode,
             organization_id=organization_id,
             user_id=user_id,
             conversation_id=conversation_id,
@@ -364,12 +406,28 @@ class AnswerService:
             provider=self._answer_provider_id(),
             status=AnswerGenerationStatus.FAILED,
             model_name=self._answer_provider_name(),
+            answer_prompt_version=ANSWER_PROMPT_VERSION,
+            grader_prompt_version=GROUNDEDNESS_GRADER_VERSION,
+            answer_model=self._answer_provider_name(),
+            embedding_model=self._embedding_model_for_run(retrieval_run_id),
+            reranker_model=get_settings().reranker_model,
+            chunking_version=CHUNKING_VERSION,
+            retrieval_configuration_version=(
+                RETRIEVAL_CONFIGURATION_VERSION
+            ),
+            authorization_policy_version=AUTHORIZATION_POLICY_VERSION,
             failure_code=failure_code,
             generation_duration_ms=generation_duration_ms,
             completed_at=datetime.now(UTC),
         )
         self.answers.add_run(answer_run)
         self.session.commit()
+
+    def _embedding_model_for_run(self, retrieval_run_id: UUID) -> str:
+        retrieval_run = self.session.get(RetrievalRun, retrieval_run_id)
+        if retrieval_run is None:
+            raise ValueError("The retrieval run does not exist.")
+        return retrieval_run.embedding_model
 
     def _answer_provider_name(self) -> str:
         model = getattr(self.answer_provider, "model", None)

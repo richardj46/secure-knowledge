@@ -5,8 +5,36 @@ on:
   pull_request:
 
 jobs:
-  placeholder:
+  deterministic-evaluations:
+    name: Deterministic evaluations
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite+pysqlite:///:memory:
+      JWT_SECRET_KEY: deterministic-evaluation-secret
+      OBJECT_STORAGE_ACCESS_KEY: not-used
+      OBJECT_STORAGE_SECRET_KEY: not-used
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Add API, worker, web, and integration test jobs here."
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --locked --dev
+      - run: uv run pytest -m evaluation
+
+  security-tests:
+    name: Security tests
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite+pysqlite:///:memory:
+      JWT_SECRET_KEY: security-test-secret
+      OBJECT_STORAGE_ACCESS_KEY: not-used
+      OBJECT_STORAGE_SECRET_KEY: not-used
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --locked --dev
+      - run: uv run pytest -m security

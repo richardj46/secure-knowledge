@@ -15,14 +15,30 @@ from secure_knowledge_core.database.base import Base
 from secure_knowledge_core.database.enums import (
     ANSWER_GENERATION_STATUS_ENUM,
     ANSWERABILITY_ENUM,
+    EXECUTION_MODE_ENUM,
     Answerability,
     AnswerGenerationStatus,
+    ExecutionMode,
 )
 from secure_knowledge_core.database.mixins import IdMixin, TimestampMixin
+from secure_knowledge_core.versioning import (
+    ANSWER_PROMPT_VERSION,
+    AUTHORIZATION_POLICY_VERSION,
+    CHUNKING_VERSION,
+    GROUNDEDNESS_GRADER_VERSION,
+    RETRIEVAL_CONFIGURATION_VERSION,
+)
 
 
 class AnswerRun(IdMixin, TimestampMixin, Base):
     __tablename__ = "answer_runs"
+
+    execution_mode: Mapped[ExecutionMode] = mapped_column(
+        EXECUTION_MODE_ENUM,
+        nullable=False,
+        default=ExecutionMode.PRODUCTION,
+        index=True,
+    )
 
     organization_id: Mapped[UUID] = mapped_column(
         Uuid,
@@ -66,6 +82,51 @@ class AnswerRun(IdMixin, TimestampMixin, Base):
     model_name: Mapped[str] = mapped_column(
         String(200),
         nullable=False,
+    )
+
+    answer_prompt_version: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default=ANSWER_PROMPT_VERSION,
+    )
+
+    grader_prompt_version: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default=GROUNDEDNESS_GRADER_VERSION,
+    )
+
+    answer_model: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False,
+    )
+
+    embedding_model: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False,
+    )
+
+    reranker_model: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+    )
+
+    chunking_version: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default=CHUNKING_VERSION,
+    )
+
+    retrieval_configuration_version: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default=RETRIEVAL_CONFIGURATION_VERSION,
+    )
+
+    authorization_policy_version: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default=AUTHORIZATION_POLICY_VERSION,
     )
 
     answerability: Mapped[Answerability | None] = mapped_column(

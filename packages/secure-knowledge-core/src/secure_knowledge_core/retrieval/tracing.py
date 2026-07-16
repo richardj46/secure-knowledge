@@ -5,6 +5,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from secure_knowledge_core.database.enums import ExecutionMode
 from secure_knowledge_core.database.models import RetrievalResultRecord, RetrievalRun
 
 
@@ -29,6 +30,7 @@ class RetrievalTrace:
     embedding_model: str
     duration_ms: int
     results: list[RetrievalTraceResult]
+    execution_mode: ExecutionMode = ExecutionMode.PRODUCTION
 
 
 class RetrievalTracer(Protocol):
@@ -42,6 +44,7 @@ class DatabaseRetrievalTracer:
 
     def record(self, trace: RetrievalTrace) -> UUID:
         run = RetrievalRun(
+            execution_mode=trace.execution_mode,
             organization_id=trace.organization_id,
             user_id=trace.user_id,
             query=trace.query,

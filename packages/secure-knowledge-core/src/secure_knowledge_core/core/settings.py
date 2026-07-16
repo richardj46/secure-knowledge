@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     answer_minimum_vector_similarity: float = 0.55
     answer_minimum_passage_characters: int = 40
     answer_retrieval_limit: int = 10
+    reranker_model: str | None = None
+
+    evaluation_live_maximum_cases: int = 25
 
     max_upload_size_bytes: int = 20 * 1024 * 1024
     ingestion_lease_seconds: int = 15 * 60

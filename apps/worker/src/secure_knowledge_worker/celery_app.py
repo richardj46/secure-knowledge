@@ -9,6 +9,7 @@ celery_app = Celery(
     broker=settings.redis_url,
     include=[
         "secure_knowledge_worker.jobs.outbox",
+        "secure_knowledge_worker.tasks.evaluations",
         "secure_knowledge_worker.tasks.ingestion",
     ],
 )

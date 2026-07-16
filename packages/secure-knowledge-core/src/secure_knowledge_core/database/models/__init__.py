@@ -10,6 +10,20 @@ from secure_knowledge_core.database.models.document_user_permission import (
     DocumentUserPermission,
 )
 from secure_knowledge_core.database.models.document_version import DocumentVersion
+from secure_knowledge_core.database.models.evaluation_case import EvaluationCase
+from secure_knowledge_core.database.models.evaluation_case_result import (
+    EvaluationCaseResult,
+)
+from secure_knowledge_core.database.models.evaluation_dataset import (
+    EvaluationDataset,
+)
+from secure_knowledge_core.database.models.evaluation_grader_result import (
+    EvaluationGraderResult,
+)
+from secure_knowledge_core.database.models.evaluation_metric_result import (
+    EvaluationMetricResult,
+)
+from secure_knowledge_core.database.models.evaluation_run import EvaluationRun
 from secure_knowledge_core.database.models.group import Group
 from secure_knowledge_core.database.models.group_membership import GroupMembership
 from secure_knowledge_core.database.models.message import Message
@@ -37,6 +51,12 @@ __all__ = [
     "DocumentGroupPermission",
     "DocumentUserPermission",
     "DocumentVersion",
+    "EvaluationCase",
+    "EvaluationCaseResult",
+    "EvaluationDataset",
+    "EvaluationGraderResult",
+    "EvaluationMetricResult",
+    "EvaluationRun",
     "Group",
     "GroupMembership",
     "Message",

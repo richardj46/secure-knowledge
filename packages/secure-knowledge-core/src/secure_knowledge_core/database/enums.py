@@ -6,6 +6,7 @@ from sqlalchemy import Enum
 class OrganizationRole(StrEnum):
     OWNER = "owner"
     ADMIN = "admin"
+    EVALUATION_ADMIN = "evaluation_admin"
     MEMBER = "member"
 
 
@@ -70,6 +71,35 @@ class AnswerGenerationStatus(StrEnum):
     FAILED = "failed"
 
 
+class EvaluationRunStatus(StrEnum):
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class EvaluationCaseStatus(StrEnum):
+    PENDING = "pending"
+    RUNNING = "running"
+    PASSED = "passed"
+    FAILED = "failed"
+    ERROR = "error"
+
+
+class HumanReviewStatus(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    NEEDS_REVISION = "needs_revision"
+
+
+class ExecutionMode(StrEnum):
+    PRODUCTION = "production"
+    EVALUATION = "evaluation"
+    TEST = "test"
+
+
 DOCUMENT_PERMISSION_LEVEL_ENUM = Enum(
     DocumentPermissionLevel,
     name="document_permission_level",
@@ -91,5 +121,29 @@ ANSWERABILITY_ENUM = Enum(
 ANSWER_GENERATION_STATUS_ENUM = Enum(
     AnswerGenerationStatus,
     name="answer_generation_status",
+    native_enum=True,
+)
+
+EVALUATION_RUN_STATUS_ENUM = Enum(
+    EvaluationRunStatus,
+    name="evaluation_run_status",
+    native_enum=True,
+)
+
+EVALUATION_CASE_STATUS_ENUM = Enum(
+    EvaluationCaseStatus,
+    name="evaluation_case_status",
+    native_enum=True,
+)
+
+HUMAN_REVIEW_STATUS_ENUM = Enum(
+    HumanReviewStatus,
+    name="human_review_status",
+    native_enum=True,
+)
+
+EXECUTION_MODE_ENUM = Enum(
+    ExecutionMode,
+    name="execution_mode",
     native_enum=True,
 )
