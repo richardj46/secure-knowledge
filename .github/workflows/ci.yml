@@ -9,7 +9,7 @@ jobs:
     name: Deterministic evaluations
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: sqlite+pysqlite:///:memory:
+      DATABASE_URL: "sqlite+pysqlite:///:memory:"
       JWT_SECRET_KEY: deterministic-evaluation-secret
       OBJECT_STORAGE_ACCESS_KEY: not-used
       OBJECT_STORAGE_SECRET_KEY: not-used
@@ -26,7 +26,7 @@ jobs:
     name: Security tests
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: sqlite+pysqlite:///:memory:
+      DATABASE_URL: "sqlite+pysqlite:///:memory:"
       JWT_SECRET_KEY: security-test-secret
       OBJECT_STORAGE_ACCESS_KEY: not-used
       OBJECT_STORAGE_SECRET_KEY: not-used
