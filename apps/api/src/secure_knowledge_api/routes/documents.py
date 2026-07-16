@@ -3,6 +3,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile, status
 
+from secure_knowledge_api.dependencies.auth import CurrentUser
+from secure_knowledge_api.dependencies.database import DatabaseSession
+from secure_knowledge_api.ingestion_queue import CeleryIngestionTaskQueue
 from secure_knowledge_core.database.enums import DocumentVisibility
 from secure_knowledge_core.documents.schemas import (
     DocumentGroupPermissionAdd,
@@ -27,10 +30,6 @@ from secure_knowledge_core.documents.service import (
 from secure_knowledge_core.documents.upload_service import DocumentUploadService
 from secure_knowledge_core.documents.upload_validation import UploadValidationError
 from secure_knowledge_core.storage.s3 import S3ObjectStorage
-
-from secure_knowledge_api.dependencies.auth import CurrentUser
-from secure_knowledge_api.dependencies.database import DatabaseSession
-from secure_knowledge_api.ingestion_queue import CeleryIngestionTaskQueue
 
 router = APIRouter(tags=["documents"])
 

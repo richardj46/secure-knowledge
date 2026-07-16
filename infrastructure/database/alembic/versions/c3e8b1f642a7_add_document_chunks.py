@@ -5,19 +5,16 @@ Revises: a9f4c2d71e38
 Create Date: 2026-07-16
 
 """
-from typing import Sequence, Union
-
 import sqlalchemy as sa
 from alembic import op
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import postgresql
 
-
 # revision identifiers, used by Alembic.
 revision: str = "c3e8b1f642a7"
-down_revision: Union[str, Sequence[str], None] = "a9f4c2d71e38"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "a9f4c2d71e38"
+branch_labels: str | None = None
+depends_on: str | None = None
 
 
 def upgrade() -> None:

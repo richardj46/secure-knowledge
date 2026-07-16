@@ -27,6 +27,18 @@ class GeminiEmbeddingProvider:
         self.client = genai.Client(api_key=settings.gemini_api_key)
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        return self._embed(texts=texts, task_type="RETRIEVAL_DOCUMENT")
+
+    def embed_query(self, query: str) -> list[float]:
+        vectors = self._embed(texts=[query], task_type="RETRIEVAL_QUERY")
+        return vectors[0]
+
+    def _embed(
+        self,
+        *,
+        texts: list[str],
+        task_type: str,
+    ) -> list[list[float]]:
         if not texts:
             return []
 
@@ -35,7 +47,7 @@ class GeminiEmbeddingProvider:
                 model=self.model,
                 contents=texts,
                 config=types.EmbedContentConfig(
-                    task_type="RETRIEVAL_DOCUMENT",
+                    task_type=task_type,
                     output_dimensionality=self.dimensions,
                 ),
             )

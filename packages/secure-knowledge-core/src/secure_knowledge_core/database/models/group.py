@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, String, UniqueConstraint, Uuid
@@ -7,6 +8,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from secure_knowledge_core.database.base import Base
 from secure_knowledge_core.database.mixins import IdMixin, TimestampMixin
+
+if TYPE_CHECKING:
+    from secure_knowledge_core.database.models.document_group_permission import (
+        DocumentGroupPermission,
+    )
+    from secure_knowledge_core.database.models.group_membership import GroupMembership
 
 
 class Group(IdMixin, TimestampMixin, Base):
@@ -37,12 +44,12 @@ class Group(IdMixin, TimestampMixin, Base):
         nullable=True,
     )
 
-    memberships: Mapped[list["GroupMembership"]] = relationship(
+    memberships: Mapped[list[GroupMembership]] = relationship(
         back_populates="group",
         cascade="all, delete-orphan",
     )
 
-    document_permissions: Mapped[list["DocumentGroupPermission"]] = relationship(
+    document_permissions: Mapped[list[DocumentGroupPermission]] = relationship(
         back_populates="group",
         cascade="all, delete-orphan",
     )

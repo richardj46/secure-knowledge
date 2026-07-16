@@ -2,7 +2,6 @@ from uuid import UUID
 
 from secure_knowledge_core.database.session import SessionFactory
 from secure_knowledge_core.outbox.service import OutboxPublisher
-
 from secure_knowledge_worker.celery_app import celery_app
 
 

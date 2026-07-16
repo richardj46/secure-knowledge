@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import Enum, ForeignKey, UniqueConstraint, Uuid
@@ -8,6 +9,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from secure_knowledge_core.database.base import Base
 from secure_knowledge_core.database.enums import WorkspaceRole
 from secure_knowledge_core.database.mixins import IdMixin, TimestampMixin
+
+if TYPE_CHECKING:
+    from secure_knowledge_core.database.models.user import User
+    from secure_knowledge_core.database.models.workspace import Workspace
 
 
 class WorkspaceMembership(IdMixin, TimestampMixin, Base):
@@ -45,10 +50,10 @@ class WorkspaceMembership(IdMixin, TimestampMixin, Base):
         default=WorkspaceRole.MEMBER,
     )
 
-    workspace: Mapped["Workspace"] = relationship(
+    workspace: Mapped[Workspace] = relationship(
         back_populates="memberships",
     )
 
-    user: Mapped["User"] = relationship(
+    user: Mapped[User] = relationship(
         back_populates="workspace_memberships",
     )

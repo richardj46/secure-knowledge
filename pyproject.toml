@@ -52,6 +52,13 @@ select = [
     "UP",
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = [
+    "secure_knowledge_api",
+    "secure_knowledge_core",
+    "secure_knowledge_worker",
+]
+
 [tool.ruff.format]
 quote-style = "double"
 

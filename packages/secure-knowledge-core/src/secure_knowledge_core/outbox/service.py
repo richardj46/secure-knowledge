@@ -8,9 +8,12 @@ from secure_knowledge_core.database.enums import (
     DocumentStatus,
     DocumentVersionStatus,
 )
-from secure_knowledge_core.database.models import Document, DocumentVersion, OutboxEvent
+from secure_knowledge_core.database.models import (
+    Document,
+    DocumentVersion,
+    OutboxEvent,
+)
 from secure_knowledge_core.ingestion.queue import IngestionTaskQueue
-
 
 DOCUMENT_VERSION_INGESTION_REQUESTED = "document_version.ingestion_requested"
 

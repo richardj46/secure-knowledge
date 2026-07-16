@@ -2,7 +2,6 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import jwt
-from jwt import ExpiredSignatureError, InvalidTokenError as PyJwtInvalidTokenError
 
 from secure_knowledge_core.auth.exceptions import InvalidTokenError
 from secure_knowledge_core.auth.schemas import TokenPayload
@@ -54,9 +53,9 @@ def decode_access_token(token: str) -> TokenPayload:
                 ]
             },
         )
-    except ExpiredSignatureError as exc:
+    except jwt.ExpiredSignatureError as exc:
         raise InvalidTokenError("Access token has expired.") from exc
-    except PyJwtInvalidTokenError as exc:
+    except jwt.InvalidTokenError as exc:
         raise InvalidTokenError("Access token is invalid.") from exc
 
     if payload.get("token_type") != "access":

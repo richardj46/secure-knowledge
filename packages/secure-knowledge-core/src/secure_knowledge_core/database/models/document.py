@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import Enum, ForeignKey, String, UniqueConstraint, Uuid
@@ -11,6 +12,15 @@ from secure_knowledge_core.database.enums import (
     DocumentVisibility,
 )
 from secure_knowledge_core.database.mixins import IdMixin, TimestampMixin
+
+if TYPE_CHECKING:
+    from secure_knowledge_core.database.models.document_group_permission import (
+        DocumentGroupPermission,
+    )
+    from secure_knowledge_core.database.models.document_user_permission import (
+        DocumentUserPermission,
+    )
+    from secure_knowledge_core.database.models.document_version import DocumentVersion
 
 
 class Document(IdMixin, TimestampMixin, Base):
@@ -96,17 +106,17 @@ class Document(IdMixin, TimestampMixin, Base):
         default=1,
     )
 
-    versions: Mapped[list["DocumentVersion"]] = relationship(
+    versions: Mapped[list[DocumentVersion]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",
     )
 
-    user_permissions: Mapped[list["DocumentUserPermission"]] = relationship(
+    user_permissions: Mapped[list[DocumentUserPermission]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",
     )
 
-    group_permissions: Mapped[list["DocumentGroupPermission"]] = relationship(
+    group_permissions: Mapped[list[DocumentGroupPermission]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",
     )

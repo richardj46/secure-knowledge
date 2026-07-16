@@ -2,6 +2,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Response, status
 
+from secure_knowledge_api.dependencies.auth import CurrentUser
+from secure_knowledge_api.dependencies.database import DatabaseSession
 from secure_knowledge_core.groups.schemas import (
     GroupCreate,
     GroupMemberAdd,
@@ -18,9 +20,6 @@ from secure_knowledge_core.groups.service import (
     GroupService,
     OrganizationNotFoundError,
 )
-
-from secure_knowledge_api.dependencies.auth import CurrentUser
-from secure_knowledge_api.dependencies.database import DatabaseSession
 
 router = APIRouter(tags=["groups"])
 

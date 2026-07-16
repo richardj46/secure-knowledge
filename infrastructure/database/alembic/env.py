@@ -1,19 +1,17 @@
+import os
 from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from pathlib import Path
 
 from alembic import context
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
+
+from secure_knowledge_core.database import models  # noqa: F401
+from secure_knowledge_core.database.base import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-
-# database url
-import os
-from pathlib import Path
-from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(PROJECT_ROOT / ".env")
@@ -25,12 +23,6 @@ config.set_main_option("sqlalchemy.url", database_url)
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-from secure_knowledge_core.database.base import Base
-from secure_knowledge_core.database import models  # noqa: F401
 
 target_metadata = Base.metadata
 

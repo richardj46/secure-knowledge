@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from secure_knowledge_core.database.base import Base
 from secure_knowledge_core.database.mixins import IdMixin, TimestampMixin
+
+if TYPE_CHECKING:
+    from secure_knowledge_core.database.models.organization_membership import (
+        OrganizationMembership,
+    )
+    from secure_knowledge_core.database.models.workspace import Workspace
 
 
 class Organization(IdMixin, TimestampMixin, Base):
@@ -22,12 +30,12 @@ class Organization(IdMixin, TimestampMixin, Base):
         nullable=False,
     )
 
-    memberships: Mapped[list["OrganizationMembership"]] = relationship(
+    memberships: Mapped[list[OrganizationMembership]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
     )
 
-    workspaces: Mapped[list["Workspace"]] = relationship(
+    workspaces: Mapped[list[Workspace]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
     )

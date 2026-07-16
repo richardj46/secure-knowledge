@@ -1,4 +1,4 @@
-import boto3
+from boto3 import client as boto3_client
 from botocore.exceptions import ClientError
 
 from secure_knowledge_core.core.settings import get_settings
@@ -7,7 +7,7 @@ from secure_knowledge_core.core.settings import get_settings
 def main() -> None:
     settings = get_settings()
 
-    client = boto3.client(
+    client = boto3_client(
         "s3",
         endpoint_url=settings.object_storage_endpoint_url,
         region_name=settings.object_storage_region,

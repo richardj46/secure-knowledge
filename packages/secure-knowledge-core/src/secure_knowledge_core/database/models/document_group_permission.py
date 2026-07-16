@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, UniqueConstraint, Uuid
@@ -11,6 +12,10 @@ from secure_knowledge_core.database.enums import (
     DocumentPermissionLevel,
 )
 from secure_knowledge_core.database.mixins import IdMixin, TimestampMixin
+
+if TYPE_CHECKING:
+    from secure_knowledge_core.database.models.document import Document
+    from secure_knowledge_core.database.models.group import Group
 
 
 class DocumentGroupPermission(IdMixin, TimestampMixin, Base):
@@ -44,10 +49,10 @@ class DocumentGroupPermission(IdMixin, TimestampMixin, Base):
         default=DocumentPermissionLevel.VIEWER,
     )
 
-    document: Mapped["Document"] = relationship(
+    document: Mapped[Document] = relationship(
         back_populates="group_permissions",
     )
 
-    group: Mapped["Group"] = relationship(
+    group: Mapped[Group] = relationship(
         back_populates="document_permissions",
     )

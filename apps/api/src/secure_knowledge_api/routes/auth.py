@@ -3,6 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from secure_knowledge_api.dependencies.auth import CurrentUser
+from secure_knowledge_api.dependencies.database import DatabaseSession
 from secure_knowledge_core.auth.exceptions import (
     EmailAlreadyRegisteredError,
     InvalidCredentialsError,
@@ -14,8 +16,6 @@ from secure_knowledge_core.auth.schemas import (
 )
 from secure_knowledge_core.auth.service import AuthService
 from secure_knowledge_core.auth.tokens import create_access_token
-from secure_knowledge_api.dependencies.auth import CurrentUser
-from secure_knowledge_api.dependencies.database import DatabaseSession
 
 router = APIRouter(
     prefix="/auth",

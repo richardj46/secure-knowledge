@@ -5,11 +5,9 @@ Revises: 79a13befe66c
 Create Date: 2026-07-16 06:01:23.757441
 
 """
-from typing import Sequence, Union
-
-from alembic import op
+# ruff: noqa: E501
 import sqlalchemy as sa
-
+from alembic import op
 
 DOCUMENT_PERMISSION_LEVEL_ENUM = sa.Enum(
     'VIEWER',
@@ -21,9 +19,9 @@ DOCUMENT_PERMISSION_LEVEL_ENUM = sa.Enum(
 
 # revision identifiers, used by Alembic.
 revision: str = '07dc1c9a1c61'
-down_revision: Union[str, Sequence[str], None] = '79a13befe66c'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '79a13befe66c'
+branch_labels: str | None = None
+depends_on: str | None = None
 
 
 def upgrade() -> None:

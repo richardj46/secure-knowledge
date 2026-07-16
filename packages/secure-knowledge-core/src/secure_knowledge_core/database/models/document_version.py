@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import (
@@ -17,6 +18,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from secure_knowledge_core.database.base import Base
 from secure_knowledge_core.database.enums import DocumentVersionStatus
 from secure_knowledge_core.database.mixins import IdMixin, TimestampMixin
+
+if TYPE_CHECKING:
+    from secure_knowledge_core.database.models.document import Document
 
 
 class DocumentVersion(IdMixin, TimestampMixin, Base):
@@ -98,6 +102,6 @@ class DocumentVersion(IdMixin, TimestampMixin, Base):
         nullable=True,
     )
 
-    document: Mapped["Document"] = relationship(
+    document: Mapped[Document] = relationship(
         back_populates="versions",
     )
