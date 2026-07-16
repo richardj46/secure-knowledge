@@ -1,7 +1,7 @@
 from typing import Protocol
 
-from secure_knowledge_core.llm.context import ContextPassage
-from secure_knowledge_core.llm.schemas import GeneratedAnswer
+from secure_knowledge_core.answers.context import ContextPassage
+from secure_knowledge_core.answers.schemas import GeneratedAnswer
 
 
 class AnswerProvider(Protocol):

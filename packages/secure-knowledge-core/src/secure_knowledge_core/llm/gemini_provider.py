@@ -2,16 +2,19 @@ from google import genai
 from google.genai import types
 from pydantic import ValidationError
 
+from secure_knowledge_core.answers.context import (
+    ContextPassage,
+    format_prompt_context,
+)
+from secure_knowledge_core.answers.exceptions import CitationValidationError
+from secure_knowledge_core.answers.schemas import GeneratedAnswer
+from secure_knowledge_core.answers.validation import validate_generated_answer
 from secure_knowledge_core.core.settings import get_settings
-from secure_knowledge_core.llm.citations import validate_citations
-from secure_knowledge_core.llm.context import ContextPassage, format_prompt_context
 from secure_knowledge_core.llm.exceptions import (
     AnswerProviderConfigurationError,
     AnswerProviderError,
-    CitationValidationError,
     InvalidGeneratedAnswerError,
 )
-from secure_knowledge_core.llm.schemas import GeneratedAnswer
 
 SYSTEM_PROMPT = """Answer only from the supplied passages.
 Do not use outside knowledge.
@@ -75,8 +78,8 @@ class GeminiAnswerProvider:
             raise InvalidGeneratedAnswerError from None
 
         try:
-            validate_citations(
-                answer=generated_answer,
+            validate_generated_answer(
+                generated=generated_answer,
                 allowed_chunk_ids=approved_chunk_ids,
             )
         except CitationValidationError:

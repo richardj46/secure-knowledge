@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, Integer, UniqueConstraint, Uuid
+from sqlalchemy import JSON, ForeignKey, Integer, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from secure_knowledge_core.database.base import Base
@@ -30,6 +30,13 @@ class AnswerCitation(IdMixin, Base):
         index=True,
     )
 
+    message_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("messages.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
     chunk_id: Mapped[UUID] = mapped_column(
         Uuid,
         ForeignKey("document_chunks.id", ondelete="CASCADE"),
@@ -47,4 +54,10 @@ class AnswerCitation(IdMixin, Base):
     citation_index: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
+    )
+
+    claims: Mapped[list[str]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
     )

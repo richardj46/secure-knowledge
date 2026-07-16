@@ -1,8 +1,12 @@
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from secure_knowledge_core.database.enums import Answerability
+
+
+class StrictAnswerModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
 class AnswerRequest(BaseModel):
@@ -11,18 +15,36 @@ class AnswerRequest(BaseModel):
     workspace_ids: list[UUID] = Field(default_factory=list)
 
 
-class AnswerCitationResponse(BaseModel):
+class CitationDraft(StrictAnswerModel):
+    chunk_id: UUID
+    claims: list[str] = Field(min_length=1)
+
+
+class GeneratedAnswer(StrictAnswerModel):
+    answer: str
+    answerability: Answerability
+    confidence: float = Field(ge=0.0, le=1.0)
+    citations: list[CitationDraft] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+
+
+class AnswerCitationRead(BaseModel):
     document_id: UUID
     document_title: str
     chunk_id: UUID
     page_number: int | None
+    claims: list[str]
+
+
+AnswerCitationResponse = AnswerCitationRead
 
 
 class AnswerResponse(BaseModel):
     conversation_id: UUID
     message_id: UUID
+    answer_run_id: UUID
     answer: str
     answerability: Answerability
     confidence: float
-    citations: list[AnswerCitationResponse]
+    citations: list[AnswerCitationRead]
     limitations: list[str]

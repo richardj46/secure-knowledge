@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, Field
 
 
 class RetrievalSearchRequest(BaseModel):
@@ -25,14 +25,6 @@ class RetrievalResult(BaseModel):
 
 
 class RetrievalSearchResponse(BaseModel):
-    _retrieval_run_id: UUID | None = PrivateAttr(default=None)
-
+    retrieval_run_id: UUID
     query: str
     results: list[RetrievalResult]
-
-    @property
-    def retrieval_run_id(self) -> UUID | None:
-        return self._retrieval_run_id
-
-    def attach_retrieval_run_id(self, retrieval_run_id: UUID | None) -> None:
-        self._retrieval_run_id = retrieval_run_id

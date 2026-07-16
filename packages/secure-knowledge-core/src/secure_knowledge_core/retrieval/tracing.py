@@ -32,7 +32,7 @@ class RetrievalTrace:
 
 
 class RetrievalTracer(Protocol):
-    def record(self, trace: RetrievalTrace) -> UUID | None:
+    def record(self, trace: RetrievalTrace) -> UUID:
         ...
 
 

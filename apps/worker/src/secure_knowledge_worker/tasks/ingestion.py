@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from secure_knowledge_core.database.session import SessionFactory
+from secure_knowledge_core.ingestion.embeddings import GeminiEmbeddingProvider
 from secure_knowledge_core.ingestion.exceptions import TransientIngestionError
 from secure_knowledge_core.ingestion.service import DocumentIngestionService
 from secure_knowledge_worker.celery_app import celery_app
@@ -20,7 +21,10 @@ def ingest_document_version(
     document_version_id: str,
 ) -> None:
     with SessionFactory() as session:
-        service = DocumentIngestionService(session=session)
+        service = DocumentIngestionService(
+            session=session,
+            embedding_provider=GeminiEmbeddingProvider(),
+        )
         service.ingest(
             document_version_id=UUID(document_version_id),
         )

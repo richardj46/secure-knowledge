@@ -1,13 +1,12 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+from secure_knowledge_core.answers.context import build_context_passages
+from secure_knowledge_core.answers.schemas import GeneratedAnswer
 from secure_knowledge_core.core.settings import get_settings
 from secure_knowledge_core.database.enums import Answerability
 from secure_knowledge_core.llm.abstention import AbstentionPolicy
-from secure_knowledge_core.llm.context import build_context_passages
-from secure_knowledge_core.llm.gemini_provider import GeminiAnswerProvider
 from secure_knowledge_core.llm.interface import AnswerProvider
-from secure_knowledge_core.llm.schemas import GeneratedAnswer
 from secure_knowledge_core.retrieval.schemas import RetrievalResult
 
 
@@ -23,7 +22,7 @@ class AnswerGenerationService:
     def __init__(
         self,
         *,
-        provider: AnswerProvider | None = None,
+        provider: AnswerProvider,
         abstention_policy: AbstentionPolicy | None = None,
     ) -> None:
         self.provider = provider
@@ -74,9 +73,6 @@ class AnswerGenerationService:
                 allowed_chunk_ids=frozenset(),
             )
 
-        if self.provider is None:
-            self.provider = GeminiAnswerProvider()
-
         allowed_chunk_ids = frozenset(
             result.chunk_id for result in decision.passages
         )
@@ -91,7 +87,6 @@ class AnswerGenerationService:
         )
 
     def _provider_model_name(self) -> str:
-        assert self.provider is not None
         model = getattr(self.provider, "model", None)
         if isinstance(model, str) and model:
             return model

@@ -1,7 +1,16 @@
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import Float, ForeignKey, Integer, Numeric, String, Uuid
+from sqlalchemy import (
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from secure_knowledge_core.database.base import Base
@@ -88,5 +97,10 @@ class AnswerRun(IdMixin, TimestampMixin, Base):
 
     error_code: Mapped[str | None] = mapped_column(
         String(100),
+        nullable=True,
+    )
+
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
         nullable=True,
     )

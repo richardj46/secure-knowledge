@@ -5,6 +5,7 @@ from secure_knowledge_core.llm.context import (
     build_context_passages,
     format_prompt_context,
 )
+from secure_knowledge_core.llm.fake import FakeAnswerProvider
 from secure_knowledge_core.llm.gemini_provider import GeminiAnswerProvider
 from secure_knowledge_core.llm.schemas import (
     CitationDraft,
@@ -22,6 +23,7 @@ __all__ = [
     "AnswerGenerationService",
     "CitationDraft",
     "ContextPassage",
+    "FakeAnswerProvider",
     "GeminiAnswerProvider",
     "GeneratedAnswer",
     "build_context_passages",

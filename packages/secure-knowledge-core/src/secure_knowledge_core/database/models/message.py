@@ -18,6 +18,13 @@ class Message(IdMixin, TimestampMixin, Base):
         index=True,
     )
 
+    answer_run_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("answer_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     role: Mapped[MessageRole] = mapped_column(
         MESSAGE_ROLE_ENUM,
         nullable=False,

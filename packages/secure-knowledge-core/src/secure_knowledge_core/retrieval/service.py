@@ -5,7 +5,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
 from secure_knowledge_core.database.models import OrganizationMembership, Workspace
-from secure_knowledge_core.ingestion.embeddings import GeminiEmbeddingProvider
+from secure_knowledge_core.ingestion.embeddings import EmbeddingProvider
 from secure_knowledge_core.ingestion.exceptions import (
     EmbeddingConfigurationError,
     EmbeddingProviderError,
@@ -37,16 +37,17 @@ from secure_knowledge_core.retrieval.tracing import (
 class RetrievalService:
     def __init__(
         self,
-        session: Session,
         *,
+        session: Session,
+        embedding_provider: EmbeddingProvider,
         authorization: RetrievalAuthorization | None = None,
-        embeddings: QueryEmbeddingService | None = None,
         repository: RetrievalRepository | None = None,
         tracer: RetrievalTracer | None = None,
     ) -> None:
         self.session = session
+        self.embedding_provider = embedding_provider
         self.authorization = authorization or RetrievalAuthorization(session)
-        self.query_embeddings = embeddings
+        self.query_embeddings = QueryEmbeddingService(embedding_provider)
         self.repository = repository or RetrievalRepository(session)
         self.tracer = tracer or DatabaseRetrievalTracer(session)
 
@@ -68,11 +69,9 @@ class RetrievalService:
             workspace_ids=request.workspace_ids,
         )
         try:
-            if self.query_embeddings is None:
-                self.query_embeddings = QueryEmbeddingService(
-                    GeminiEmbeddingProvider()
-                )
-            query_embedding = self.query_embeddings.create_query_embedding(request.query)
+            query_embedding = self.query_embeddings.create_query_embedding(
+                request.query
+            )
         except (EmbeddingConfigurationError, EmbeddingProviderError):
             raise RetrievalUnavailableError from None
 
@@ -97,33 +96,30 @@ class RetrievalService:
                 keyword_results=keyword_results,
             )
         )[: request.limit]
-        response = RetrievalSearchResponse(
-            query=request.query,
-            results=[
-                RetrievalResult(
-                    chunk_id=item.chunk_id,
-                    document_id=item.document_id,
-                    document_title=item.document_title,
-                    content=item.content,
-                    page_number=item.page_number,
-                    section_title=item.section_title,
-                    score=item.fused_score,
-                    vector_rank=item.vector_rank,
-                    keyword_rank=item.keyword_rank,
-                    vector_score=item.vector_score,
-                    keyword_score=item.keyword_score,
-                    retrieval_sources=[
-                        source
-                        for source, rank in (
-                            ("vector", item.vector_rank),
-                            ("keyword", item.keyword_rank),
-                        )
-                        if rank is not None
-                    ],
-                )
-                for item in results
-            ],
-        )
+        retrieval_results = [
+            RetrievalResult(
+                chunk_id=item.chunk_id,
+                document_id=item.document_id,
+                document_title=item.document_title,
+                content=item.content,
+                page_number=item.page_number,
+                section_title=item.section_title,
+                score=item.fused_score,
+                vector_rank=item.vector_rank,
+                keyword_rank=item.keyword_rank,
+                vector_score=item.vector_score,
+                keyword_score=item.keyword_score,
+                retrieval_sources=[
+                    source
+                    for source, rank in (
+                        ("vector", item.vector_rank),
+                        ("keyword", item.keyword_rank),
+                    )
+                    if rank is not None
+                ],
+            )
+            for item in results
+        ]
         retrieval_run_id = self.tracer.record(
             RetrievalTrace(
                 organization_id=organization_id,
@@ -143,22 +139,21 @@ class RetrievalService:
                         vector_rank=result.vector_rank,
                         keyword_rank=result.keyword_rank,
                     )
-                    for rank, result in enumerate(response.results, start=1)
+                    for rank, result in enumerate(retrieval_results, start=1)
                 ],
             )
         )
-        response.attach_retrieval_run_id(retrieval_run_id)
-        return response
+        return RetrievalSearchResponse(
+            retrieval_run_id=retrieval_run_id,
+            query=request.query,
+            results=retrieval_results,
+        )
 
     def _embedding_model_name(self) -> str:
-        if self.query_embeddings is None:
-            return "unknown"
-
-        provider = self.query_embeddings.provider
-        model = getattr(provider, "model", None)
+        model = getattr(self.embedding_provider, "model", None)
         if isinstance(model, str) and model:
             return model
-        return type(provider).__name__
+        return type(self.embedding_provider).__name__
 
     def _validate_workspace_filters(
         self,

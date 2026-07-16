@@ -9,9 +9,13 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from secure_knowledge_api.dependencies.auth import get_current_user
+from secure_knowledge_api.dependencies.llm import get_answer_provider
+from secure_knowledge_api.dependencies.retrieval import get_retrieval_service
 from secure_knowledge_api.main import app
+from secure_knowledge_core.answers.schemas import CitationDraft, GeneratedAnswer
 from secure_knowledge_core.database.base import Base
 from secure_knowledge_core.database.enums import (
+    Answerability,
     DocumentPermissionLevel,
     DocumentStatus,
     DocumentVersionStatus,
@@ -20,6 +24,8 @@ from secure_knowledge_core.database.enums import (
     WorkspaceRole,
 )
 from secure_knowledge_core.database.models import (
+    AnswerCitation,
+    AnswerRun,
     Document,
     DocumentChunk,
     DocumentGroupPermission,
@@ -36,6 +42,7 @@ from secure_knowledge_core.database.models import (
     WorkspaceMembership,
 )
 from secure_knowledge_core.database.session import get_session
+from secure_knowledge_core.llm.fake import FakeAnswerProvider
 from secure_knowledge_core.retrieval import service as retrieval_service_module
 from secure_knowledge_core.retrieval.fusion import (
     FusedChunk,
@@ -45,6 +52,7 @@ from secure_knowledge_core.retrieval.repository import (
     RankedChunk,
     build_retrievable_chunk_condition,
 )
+from secure_knowledge_core.retrieval.service import RetrievalService
 
 
 @dataclass
@@ -344,6 +352,10 @@ def security_scenario() -> Iterator[RetrievalSecurityScenario]:
         yield session
 
     app.dependency_overrides[get_session] = override_session
+    app.dependency_overrides[get_retrieval_service] = lambda: RetrievalService(
+        session=session,
+        embedding_provider=DeterministicEmbeddingProvider(),
+    )
 
     with TestClient(app) as client:
         yield RetrievalSecurityScenario(
@@ -682,15 +694,10 @@ def install_recording_retrieval(
 ) -> RetrievalStageCapture:
     capture = RetrievalStageCapture([], [], [], [])
     repository = RecordingAuthorizedRepository(scenario.session, capture)
-    monkeypatch.setattr(
-        retrieval_service_module,
-        "RetrievalRepository",
-        lambda session: repository,
-    )
-    monkeypatch.setattr(
-        retrieval_service_module,
-        "GeminiEmbeddingProvider",
-        DeterministicEmbeddingProvider,
+    app.dependency_overrides[get_retrieval_service] = lambda: RetrievalService(
+        session=scenario.session,
+        embedding_provider=DeterministicEmbeddingProvider(),
+        repository=repository,
     )
 
     def capture_fusion(
@@ -814,3 +821,91 @@ def test_exact_inaccessible_workspace_match_never_enters_retrieval_pipeline(
         security_scenario,
         forbidden_chunk_id=forbidden_chunk.id,
     )
+
+
+def test_answer_endpoint_uses_injected_fake_provider_with_authorized_citation(
+    security_scenario: RetrievalSecurityScenario,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authorized_chunk = security_scenario.session.scalar(
+        select(DocumentChunk)
+        .join(
+            DocumentVersion,
+            DocumentVersion.id == DocumentChunk.document_version_id,
+        )
+        .where(
+            DocumentChunk.document_id == security_scenario.incident_report.id,
+            DocumentVersion.version_number
+            == security_scenario.incident_report.current_version_number,
+        )
+    )
+    assert authorized_chunk is not None
+    authorized_chunk.content = (
+        "Critical incidents must be escalated immediately."
+    )
+    security_scenario.session.flush()
+
+    install_recording_retrieval(
+        monkeypatch,
+        scenario=security_scenario,
+    )
+    fake_provider = FakeAnswerProvider(
+        GeneratedAnswer(
+            answer="Critical incidents must be escalated immediately.",
+            answerability=Answerability.ANSWERABLE,
+            confidence=0.9,
+            citations=[
+                CitationDraft(
+                    chunk_id=authorized_chunk.id,
+                    claims=[
+                        "Critical incidents require immediate escalation."
+                    ],
+                )
+            ],
+            limitations=[],
+        )
+    )
+    app.dependency_overrides[get_answer_provider] = lambda: fake_provider
+    security_scenario.authenticate_as(security_scenario.alice)
+
+    response = security_scenario.client.post(
+        f"/organizations/{security_scenario.organization_a.id}/answers",
+        json={
+            "question": "How should a critical incident be escalated?",
+            "workspace_ids": [str(security_scenario.engineering.id)],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["answer"] == (
+        "Critical incidents must be escalated immediately."
+    )
+    assert payload["answerability"] == Answerability.ANSWERABLE
+    assert payload["confidence"] == 0.9
+    assert payload["citations"] == [
+        {
+            "document_id": str(security_scenario.incident_report.id),
+            "document_title": security_scenario.incident_report.title,
+            "chunk_id": str(authorized_chunk.id),
+            "page_number": authorized_chunk.page_number,
+            "claims": [
+                "Critical incidents require immediate escalation."
+            ],
+        }
+    ]
+
+    answer_run = security_scenario.session.get(
+        AnswerRun,
+        UUID(payload["answer_run_id"]),
+    )
+    assert answer_run is not None
+    assert answer_run.model_name == fake_provider.model
+
+    citation = security_scenario.session.scalar(
+        select(AnswerCitation).where(
+            AnswerCitation.answer_run_id == answer_run.id
+        )
+    )
+    assert citation is not None
+    assert citation.chunk_id == authorized_chunk.id

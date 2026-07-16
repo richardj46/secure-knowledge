@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 
 from secure_knowledge_api.dependencies.auth import CurrentUser
-from secure_knowledge_api.dependencies.database import DatabaseSession
+from secure_knowledge_api.dependencies.retrieval import RetrievalServiceDependency
 from secure_knowledge_core.retrieval.exceptions import (
     OrganizationNotFoundError,
     RetrievalUnavailableError,
@@ -13,7 +13,6 @@ from secure_knowledge_core.retrieval.schemas import (
     RetrievalSearchRequest,
     RetrievalSearchResponse,
 )
-from secure_knowledge_core.retrieval.service import RetrievalService
 
 router = APIRouter(tags=["retrieval"])
 
@@ -26,10 +25,9 @@ def search(
     organization_id: UUID,
     data: RetrievalSearchRequest,
     current_user: CurrentUser,
-    session: DatabaseSession,
+    service: RetrievalServiceDependency,
 ) -> RetrievalSearchResponse:
     try:
-        service = RetrievalService(session)
         return service.search(
             organization_id=organization_id,
             user_id=current_user.id,

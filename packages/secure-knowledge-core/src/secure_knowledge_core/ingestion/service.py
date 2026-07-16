@@ -15,10 +15,7 @@ from secure_knowledge_core.database.models import (
     DocumentVersion,
 )
 from secure_knowledge_core.ingestion.chunking import ParagraphTokenChunker
-from secure_knowledge_core.ingestion.embeddings import (
-    EmbeddingProvider,
-    GeminiEmbeddingProvider,
-)
+from secure_knowledge_core.ingestion.embeddings import EmbeddingProvider
 from secure_knowledge_core.ingestion.exceptions import (
     DocumentVersionNotFoundError,
     EmbeddingCountMismatchError,
@@ -52,14 +49,14 @@ class DocumentIngestionService:
         self,
         *,
         session: Session,
+        embedding_provider: EmbeddingProvider,
         storage: ObjectStorage | None = None,
         chunker: ParagraphTokenChunker | None = None,
-        embedding_provider: EmbeddingProvider | None = None,
     ) -> None:
         self.session = session
         self._storage = storage
         self._chunker = chunker
-        self._embedding_provider = embedding_provider
+        self.embedding_provider = embedding_provider
         self.extractors: dict[str, DocumentExtractor] = {
             "application/pdf": PdfExtractor(),
             "text/plain": PlainTextExtractor(),
@@ -205,12 +202,6 @@ class DocumentIngestionService:
         if self._chunker is None:
             self._chunker = ParagraphTokenChunker()
         return self._chunker
-
-    @property
-    def embedding_provider(self) -> EmbeddingProvider:
-        if self._embedding_provider is None:
-            self._embedding_provider = GeminiEmbeddingProvider()
-        return self._embedding_provider
 
     def _lease_is_fresh(self, version: DocumentVersion) -> bool:
         lease_reference = version.updated_at or version.processing_started_at
