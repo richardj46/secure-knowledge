@@ -1,0 +1,6 @@
+ANSWER_PROMPT_VERSION = "answer-v1"
+GROUNDEDNESS_GRADER_VERSION = "groundedness-v1"
+AUTHORIZATION_POLICY_VERSION = "document-access-v1"
+CHUNKING_VERSION = "paragraph-token-v1"
+
+RETRIEVAL_CONFIGURATION_VERSION = "hybrid-rrf-v1"

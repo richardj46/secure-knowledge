@@ -76,6 +76,9 @@ The worker handles asynchronous jobs such as:
 * evaluation runs
 * cleanup tasks
 
+Cleanup periods, preserved aggregates, and organization-specific audit
+requirements are documented in the [data retention policy](docs/retention-policy.md).
+
 ### Web
 
 The React and TypeScript application provides:
@@ -336,6 +339,15 @@ http://localhost:8000/docs
 ```
 
 ## Development commands
+
+Run the ingestion worker locally:
+
+```bash
+uv run celery \
+  -A secure_knowledge_worker.celery_app:celery_app \
+  worker \
+  --loglevel=INFO
+```
 
 Run tests:
 

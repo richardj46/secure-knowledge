@@ -3,8 +3,9 @@ name = "secure-knowledge-worker"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+  "celery[redis]>=5.6.3",
   "redis>=5.2",
-  "secure-knowledge-core"
+  "secure-knowledge-core",
 ]
 
 [tool.uv.sources]

@@ -4,6 +4,10 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
+
 from secure_knowledge_api.dependencies.auth import get_current_user
 from secure_knowledge_api.main import app
 from secure_knowledge_core.database.base import Base
@@ -16,9 +20,6 @@ from secure_knowledge_core.database.models import (
     WorkspaceMembership,
 )
 from secure_knowledge_core.database.session import get_session
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 
 @dataclass

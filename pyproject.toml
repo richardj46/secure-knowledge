@@ -38,6 +38,11 @@ testpaths = [
     "tests",
 ]
 addopts = "-ra --import-mode=importlib"
+markers = [
+    "evaluation: deterministic evaluation regression tests",
+    "live: external provider tests",
+    "security: authorization and tenant isolation tests",
+]
 
 [tool.ruff]
 target-version = "py312"
@@ -50,6 +55,13 @@ select = [
     "I",
     "B",
     "UP",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "secure_knowledge_api",
+    "secure_knowledge_core",
+    "secure_knowledge_worker",
 ]
 
 [tool.ruff.format]

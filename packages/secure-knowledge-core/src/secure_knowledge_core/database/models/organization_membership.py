@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import Enum, ForeignKey, UniqueConstraint, Uuid
@@ -8,6 +9,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from secure_knowledge_core.database.base import Base
 from secure_knowledge_core.database.enums import OrganizationRole
 from secure_knowledge_core.database.mixins import IdMixin, TimestampMixin
+
+if TYPE_CHECKING:
+    from secure_knowledge_core.database.models.organization import Organization
+    from secure_knowledge_core.database.models.user import User
 
 
 class OrganizationMembership(IdMixin, TimestampMixin, Base):
@@ -45,10 +50,10 @@ class OrganizationMembership(IdMixin, TimestampMixin, Base):
         default=OrganizationRole.MEMBER,
     )
 
-    organization: Mapped["Organization"] = relationship(
+    organization: Mapped[Organization] = relationship(
         back_populates="memberships",
     )
 
-    user: Mapped["User"] = relationship(
+    user: Mapped[User] = relationship(
         back_populates="organization_memberships",
     )

@@ -1,0 +1,1 @@
+"""Permission-aware document retrieval."""

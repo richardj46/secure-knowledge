@@ -1,4 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
+
+from secure_knowledge_api.dependencies.auth import CurrentUser
+from secure_knowledge_api.dependencies.database import DatabaseSession
 from secure_knowledge_core.organizations.schemas import (
     OrganizationCreate,
     OrganizationRead,
@@ -7,9 +10,6 @@ from secure_knowledge_core.organizations.service import (
     OrganizationService,
     OrganizationSlugAlreadyExistsError,
 )
-
-from secure_knowledge_api.dependencies.auth import CurrentUser
-from secure_knowledge_api.dependencies.database import DatabaseSession
 
 router = APIRouter(
     prefix="/organizations",
