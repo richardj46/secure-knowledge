@@ -11,6 +11,9 @@ import { EvaluationRunsPage } from "./features/admin/evaluations/EvaluationRunsP
 import { RetrievalRunDetailPage } from "./features/admin/retrieval-runs/RetrievalRunDetailPage";
 import { RetrievalRunsPage } from "./features/admin/retrieval-runs/RetrievalRunsPage";
 import { AdminLayout } from "./features/admin/shared/AdminLayout";
+import { LoginPage } from "./features/auth/LoginPage";
+import { RegisterPage } from "./features/auth/RegisterPage";
+import { RequireAuthentication } from "./shared/auth/RequireAuthentication";
 import { RequireSelectedOrganization } from "./shared/organizations/RequireSelectedOrganization";
 
 export const router = createBrowserRouter([
@@ -21,9 +24,11 @@ export const router = createBrowserRouter([
   {
     path: "/admin",
     element: (
-      <RequireSelectedOrganization>
-        <AdminLayout />
-      </RequireSelectedOrganization>
+      <RequireAuthentication>
+        <RequireSelectedOrganization>
+          <AdminLayout />
+        </RequireSelectedOrganization>
+      </RequireAuthentication>
     ),
     children: [
       { index: true, element: <AdminDashboardPage /> },
@@ -38,6 +43,8 @@ export const router = createBrowserRouter([
       { path: "audit", element: <AuditLogPage /> },
     ],
   },
+  { path: "/login", element: <LoginPage /> },
+  { path: "/register", element: <RegisterPage /> },
   {
     path: "*",
     element: <Navigate to="/admin" replace />,

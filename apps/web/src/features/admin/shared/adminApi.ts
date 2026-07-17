@@ -1,3 +1,12 @@
+import { getAccessToken } from "../../../shared/auth/tokens";
+
+export {
+  ACCESS_TOKEN_STORAGE_KEY,
+  clearAccessToken,
+  getAccessToken,
+  storeAccessToken,
+} from "../../../shared/auth/tokens";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export class AdminApiError extends Error {
@@ -9,6 +18,21 @@ export class AdminApiError extends Error {
   }
 }
 
+function createAuthorizedHeaders(
+  additionalHeaders: Record<string, string> = {},
+): Headers {
+  const accessToken = getAccessToken();
+  if (!accessToken) {
+    throw new AdminApiError("Authentication is required.", 401);
+  }
+
+  return new Headers({
+    Accept: "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    ...additionalHeaders,
+  });
+}
+
 export async function fetchAdminResource<T>(
   organizationId: string,
   resourcePath: `/${string}`,
@@ -17,8 +41,7 @@ export async function fetchAdminResource<T>(
   const organizationPath = encodeURIComponent(organizationId);
   const path = `/organizations/${organizationPath}/admin${resourcePath}`;
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    credentials: "include",
-    headers: { Accept: "application/json" },
+    headers: createAuthorizedHeaders(),
     signal,
   });
 
@@ -43,11 +66,9 @@ export async function createAdminResource<TResponse, TBody>(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     body: JSON.stringify(body),
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
+    headers: createAuthorizedHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     signal,
   });
 

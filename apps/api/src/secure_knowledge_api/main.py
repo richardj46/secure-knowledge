@@ -17,7 +17,7 @@ from secure_knowledge_api.routes.workspaces import router as workspaces_router
 from secure_knowledge_core.core.logging import configure_logging
 
 configure_logging(service="api")
-app = FastAPI(title="SecureKnowledge API")
+app = FastAPI(title="Secure-Knowledge API")
 app.add_middleware(RequestContextMiddleware)
 
 app.include_router(admin_router)

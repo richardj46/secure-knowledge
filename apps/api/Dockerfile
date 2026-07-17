@@ -8,4 +8,4 @@ COPY apps/api /app
 RUN pip install --no-cache-dir /packages/secure-knowledge-core
 RUN pip install --no-cache-dir .
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "secure_knowledge_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

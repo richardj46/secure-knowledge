@@ -1,5 +1,6 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
+import { clearAccessToken } from "../../../shared/auth/tokens";
 import { useSelectedOrganization } from "../../../shared/organizations/context";
 
 const navigation = [
@@ -12,7 +13,14 @@ const navigation = [
 ];
 
 export function AdminLayout() {
-  const { organization } = useSelectedOrganization();
+  const navigate = useNavigate();
+  const { clearOrganization, organization } = useSelectedOrganization();
+
+  function signOut() {
+    clearAccessToken();
+    clearOrganization();
+    navigate("/login", { replace: true });
+  }
 
   return (
     <div className="admin-shell">
@@ -36,6 +44,9 @@ export function AdminLayout() {
             </NavLink>
           ))}
         </nav>
+        <button className="sign-out-button" onClick={signOut} type="button">
+          Sign out
+        </button>
       </aside>
       <main className="admin-content">
         <Outlet />
