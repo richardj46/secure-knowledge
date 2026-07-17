@@ -76,6 +76,9 @@ The worker handles asynchronous jobs such as:
 * evaluation runs
 * cleanup tasks
 
+Cleanup periods, preserved aggregates, and organization-specific audit
+requirements are documented in the [data retention policy](docs/retention-policy.md).
+
 ### Web
 
 The React and TypeScript application provides:

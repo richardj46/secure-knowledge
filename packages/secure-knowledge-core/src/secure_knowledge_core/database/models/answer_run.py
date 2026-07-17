@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import (
+    JSON,
     DateTime,
     Float,
     ForeignKey,
@@ -9,6 +10,7 @@ from sqlalchemy import (
     String,
     Uuid,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from secure_knowledge_core.database.base import Base
@@ -137,6 +139,12 @@ class AnswerRun(IdMixin, TimestampMixin, Base):
     confidence: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
+    )
+
+    limitations: Mapped[list[str]] = mapped_column(
+        JSON().with_variant(JSONB(), "postgresql"),
+        nullable=False,
+        default=list,
     )
 
     input_tokens: Mapped[int | None] = mapped_column(

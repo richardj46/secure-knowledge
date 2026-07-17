@@ -143,6 +143,7 @@ class OutboxPublisher:
             DocumentVersionStatus.FAILED,
         }:
             document_version.status = DocumentVersionStatus.QUEUED
+            document_version.processing_stage = DocumentVersionStatus.QUEUED
             if (
                 document is not None
                 and document.current_version_number

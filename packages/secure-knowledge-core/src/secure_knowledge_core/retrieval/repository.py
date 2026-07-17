@@ -6,9 +6,11 @@ from sqlalchemy import and_, cast, func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
+from secure_knowledge_core.core.tracing import start_span
 from secure_knowledge_core.database.enums import (
     DocumentStatus,
     DocumentVersionStatus,
+    PermissionPath,
 )
 from secure_knowledge_core.database.models import (
     Document,
@@ -17,6 +19,8 @@ from secure_knowledge_core.database.models import (
 )
 from secure_knowledge_core.retrieval.authorization import (
     build_authorized_document_condition,
+    build_document_permission_path_expression,
+    build_document_permission_source_id_expression,
 )
 
 
@@ -30,6 +34,12 @@ class RankedChunk:
     section_title: str | None
     score: float
     rank: int
+
+
+@dataclass(frozen=True)
+class PermissionDecision:
+    path: PermissionPath
+    source_id: UUID | None
 
 
 def build_retrievable_chunk_condition(
@@ -47,6 +57,50 @@ def build_retrievable_chunk_condition(
         DocumentVersion.status == DocumentVersionStatus.READY,
         Document.current_version_number == DocumentVersion.version_number,
     )
+
+
+def load_document_permission_decisions(
+    *,
+    session: Session,
+    user_id: UUID,
+    organization_id: UUID,
+    document_ids: set[UUID],
+) -> dict[UUID, PermissionDecision]:
+    attributes = {"organization_id": organization_id}
+    if len(document_ids) == 1:
+        attributes["document_id"] = next(iter(document_ids))
+    with start_span(
+        "authorization.resolve_document_access",
+        attributes,
+    ):
+        if not document_ids:
+            return {}
+
+        permission_path = build_document_permission_path_expression(
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        permission_source_id = build_document_permission_source_id_expression(
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        rows = session.execute(
+            select(
+                Document.id,
+                permission_path.label("permission_path"),
+                permission_source_id.label("permission_source_id"),
+            ).where(
+                Document.organization_id == organization_id,
+                Document.id.in_(document_ids),
+            )
+        ).all()
+    return {
+        row.id: PermissionDecision(
+            path=PermissionPath(row.permission_path),
+            source_id=row.permission_source_id,
+        )
+        for row in rows
+    }
 
 
 class RetrievalRepository:
@@ -181,3 +235,17 @@ class RetrievalRepository:
             )
             for index, row in enumerate(rows, start=1)
         ]
+
+    def permission_decisions(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        document_ids: set[UUID],
+    ) -> dict[UUID, PermissionDecision]:
+        return load_document_permission_decisions(
+            session=self.session,
+            user_id=user_id,
+            organization_id=organization_id,
+            document_ids=document_ids,
+        )

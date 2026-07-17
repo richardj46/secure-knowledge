@@ -27,4 +27,5 @@ def ingest_document_version(
         )
         service.ingest(
             document_version_id=UUID(document_version_id),
+            worker_task_id=self.request.id,
         )

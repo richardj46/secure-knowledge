@@ -1,10 +1,23 @@
 from uuid import UUID
 
-from sqlalchemy import Float, ForeignKey, Integer, UniqueConstraint, Uuid
+from sqlalchemy import (
+    Boolean,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from secure_knowledge_core.database.base import Base
+from secure_knowledge_core.database.enums import (
+    PERMISSION_PATH_ENUM,
+    PermissionPath,
+)
 from secure_knowledge_core.database.mixins import IdMixin
+from secure_knowledge_core.versioning import AUTHORIZATION_POLICY_VERSION
 
 
 class RetrievalResultRecord(IdMixin, Base):
@@ -62,4 +75,26 @@ class RetrievalResultRecord(IdMixin, Base):
     keyword_rank: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
+    )
+
+    selected_for_context: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    permission_path: Mapped[PermissionPath | None] = mapped_column(
+        PERMISSION_PATH_ENUM,
+        nullable=True,
+    )
+
+    permission_source_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        nullable=True,
+    )
+
+    authorization_policy_version: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default=AUTHORIZATION_POLICY_VERSION,
     )

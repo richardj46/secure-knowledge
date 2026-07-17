@@ -89,6 +89,7 @@ class AnswerRepository:
             authorization_policy_version=AUTHORIZATION_POLICY_VERSION,
             answerability=generation.answer.answerability,
             confidence=generation.answer.confidence,
+            limitations=generation.answer.limitations,
             input_tokens=(
                 generation.usage.input_tokens
                 if generation.usage is not None
@@ -127,6 +128,7 @@ class AnswerRepository:
                     chunk_id=citation.chunk_id,
                     document_id=result.document_id,
                     citation_index=index,
+                    claims=citation.claims,
                 )
             )
             responses.append(

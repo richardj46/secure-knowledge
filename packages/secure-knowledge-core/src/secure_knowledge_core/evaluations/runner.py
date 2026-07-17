@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from secure_knowledge_core.answers.exceptions import CitationValidationError
+from secure_knowledge_core.core.tracing import set_span_attributes, start_span
 from secure_knowledge_core.database.enums import (
     EvaluationCaseStatus,
     ExecutionMode,
@@ -39,6 +40,28 @@ class EvaluationRunner:
         self.graders = graders
 
     def run_case(
+        self,
+        *,
+        evaluation_run: EvaluationRun,
+        evaluation_case: EvaluationCase,
+    ) -> EvaluationCaseResult:
+        with start_span(
+            "evaluation.run_case",
+            {
+                "organization_id": evaluation_run.organization_id,
+                "evaluation_run_id": evaluation_run.id,
+                "evaluation_case_id": evaluation_case.id,
+                "model": evaluation_run.answer_model,
+            },
+        ) as span:
+            result = self._run_case(
+                evaluation_run=evaluation_run,
+                evaluation_case=evaluation_case,
+            )
+            set_span_attributes(span, {"status": result.status})
+            return result
+
+    def _run_case(
         self,
         *,
         evaluation_run: EvaluationRun,
@@ -86,17 +109,23 @@ class EvaluationRunner:
                 conversation_id=conversation.id,
             )
 
-            deterministic_metrics = (
-                self._calculate_deterministic_metrics(
+            with start_span(
+                "evaluation.grade",
+                {
+                    "organization_id": evaluation_run.organization_id,
+                    "evaluation_run_id": evaluation_run.id,
+                    "evaluation_case_id": evaluation_case.id,
+                    "model": evaluation_run.answer_model,
+                },
+            ):
+                deterministic_metrics = self._calculate_deterministic_metrics(
                     definition=definition,
                     execution=execution,
                 )
-            )
-
-            grader_results = self._run_graders(
-                definition=definition,
-                execution=execution,
-            )
+                grader_results = self._run_graders(
+                    definition=definition,
+                    execution=execution,
+                )
 
             passed = self._determine_case_pass(
                 deterministic_metrics=deterministic_metrics,

@@ -2,11 +2,20 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from secure_knowledge.database.base import Base
-from secure_knowledge.database.mixins import IdMixin
-from sqlalchemy import DateTime, ForeignKey, String, Text, Uuid
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, validates
+
+from secure_knowledge_core.audit.events import (
+    AuditEventType,
+    normalize_audit_event_type,
+)
+from secure_knowledge_core.audit.redaction import (
+    redact_audit_details,
+    redact_sensitive_text,
+)
+from secure_knowledge_core.database.base import Base
+from secure_knowledge_core.database.mixins import IdMixin
 
 
 class AuditEvent(IdMixin, Base):
@@ -61,7 +70,7 @@ class AuditEvent(IdMixin, Base):
     )
 
     details: Mapped[dict[str, Any]] = mapped_column(
-        JSONB,
+        JSON().with_variant(JSONB(), "postgresql"),
         nullable=False,
         default=dict,
     )
@@ -86,3 +95,27 @@ class AuditEvent(IdMixin, Base):
         Text,
         nullable=True,
     )
+
+    @validates("event_type")
+    def validate_event_type(
+        self,
+        _key: str,
+        value: str | AuditEventType,
+    ) -> str:
+        return normalize_audit_event_type(value)
+
+    @validates("details")
+    def redact_details(
+        self,
+        _key: str,
+        value: dict[str, Any],
+    ) -> dict[str, Any]:
+        return redact_audit_details(value)
+
+    @validates("failure_message")
+    def redact_failure_message(
+        self,
+        _key: str,
+        value: str | None,
+    ) -> str | None:
+        return redact_sensitive_text(value) if value else None

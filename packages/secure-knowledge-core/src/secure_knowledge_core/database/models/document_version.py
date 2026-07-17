@@ -4,19 +4,14 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import (
-    DateTime,
-    Enum,
-    ForeignKey,
-    String,
-    Text,
-    UniqueConstraint,
-    Uuid,
-)
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from secure_knowledge_core.database.base import Base
-from secure_knowledge_core.database.enums import DocumentVersionStatus
+from secure_knowledge_core.database.enums import (
+    DOCUMENT_VERSION_STATUS_ENUM,
+    DocumentVersionStatus,
+)
 from secure_knowledge_core.database.mixins import IdMixin, TimestampMixin
 
 if TYPE_CHECKING:
@@ -61,13 +56,32 @@ class DocumentVersion(IdMixin, TimestampMixin, Base):
     )
 
     status: Mapped[DocumentVersionStatus] = mapped_column(
-        Enum(
-            DocumentVersionStatus,
-            name="document_version_status",
-            native_enum=True,
-        ),
+        DOCUMENT_VERSION_STATUS_ENUM,
         nullable=False,
         default=DocumentVersionStatus.PENDING,
+    )
+
+    processing_stage: Mapped[DocumentVersionStatus | None] = mapped_column(
+        DOCUMENT_VERSION_STATUS_ENUM,
+        nullable=True,
+        default=DocumentVersionStatus.PENDING,
+    )
+
+    attempt_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    retry_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    last_attempted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
 
     page_count: Mapped[int | None] = mapped_column(

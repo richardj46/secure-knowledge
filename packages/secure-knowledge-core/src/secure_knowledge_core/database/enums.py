@@ -94,15 +94,37 @@ class HumanReviewStatus(StrEnum):
     NEEDS_REVISION = "needs_revision"
 
 
+class ReviewStatus(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    NEEDS_REVISION = "needs_revision"
+
+
 class ExecutionMode(StrEnum):
     PRODUCTION = "production"
     EVALUATION = "evaluation"
     TEST = "test"
 
 
+class PermissionPath(StrEnum):
+    ORGANIZATION_ADMIN = "organization_admin"
+    DOCUMENT_OWNER = "document_owner"
+    ORGANIZATION_VISIBILITY = "organization_visibility"
+    WORKSPACE_MEMBERSHIP = "workspace_membership"
+    DIRECT_USER_GRANT = "direct_user_grant"
+    GROUP_GRANT = "group_grant"
+
+
 DOCUMENT_PERMISSION_LEVEL_ENUM = Enum(
     DocumentPermissionLevel,
     name="document_permission_level",
+    native_enum=True,
+)
+
+DOCUMENT_VERSION_STATUS_ENUM = Enum(
+    DocumentVersionStatus,
+    name="document_version_status",
     native_enum=True,
 )
 
@@ -142,8 +164,27 @@ HUMAN_REVIEW_STATUS_ENUM = Enum(
     native_enum=True,
 )
 
+ANSWER_REVIEW_STATUS_ENUM = Enum(
+    ReviewStatus,
+    name="review_status",
+    native_enum=True,
+)
+
+EVALUATION_REVIEW_STATUS_ENUM = Enum(
+    ReviewStatus,
+    name="evaluation_review_status",
+    native_enum=True,
+)
+
 EXECUTION_MODE_ENUM = Enum(
     ExecutionMode,
     name="execution_mode",
     native_enum=True,
+)
+
+PERMISSION_PATH_ENUM = Enum(
+    PermissionPath,
+    name="permission_path",
+    native_enum=True,
+    values_callable=lambda members: [member.value for member in members],
 )

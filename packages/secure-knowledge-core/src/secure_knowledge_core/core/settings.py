@@ -1,10 +1,17 @@
 from functools import lru_cache
+from uuid import UUID
 
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     database_url: str
+
+    environment: str = "development"
+    log_level: str = "INFO"
+    log_json: bool = True
+    log_sensitive_content: bool = False
 
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
@@ -36,6 +43,14 @@ class Settings(BaseSettings):
 
     evaluation_live_maximum_cases: int = 25
 
+    retrieval_trace_retention_days: int = Field(default=90, ge=1)
+    answer_trace_retention_days: int = Field(default=180, ge=1)
+    audit_event_retention_days: int = Field(default=365, ge=1)
+    evaluation_result_retention_days: int = Field(default=365, ge=1)
+    audit_event_retention_overrides: dict[str, int] = Field(
+        default_factory=dict,
+    )
+
     max_upload_size_bytes: int = 20 * 1024 * 1024
     ingestion_lease_seconds: int = 15 * 60
 
@@ -44,6 +59,20 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @field_validator("audit_event_retention_overrides")
+    @classmethod
+    def validate_audit_event_retention_overrides(
+        cls,
+        value: dict[str, int],
+    ) -> dict[str, int]:
+        for organization_id, retention_days in value.items():
+            UUID(organization_id)
+            if retention_days < 1:
+                raise ValueError(
+                    "Audit event retention overrides must be at least one day."
+                )
+        return value
 
 
 @lru_cache

@@ -4,6 +4,8 @@ from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
+from secure_knowledge_core.audit.events import AuditEventType
+from secure_knowledge_core.audit.service import AuditService
 from secure_knowledge_core.database.enums import (
     DocumentPermissionLevel,
     DocumentStatus,
@@ -192,6 +194,7 @@ class DocumentService:
         if version.status is not DocumentVersionStatus.FAILED:
             raise DocumentVersionNotRetryableError
 
+        previous_failure_code = version.failure_code
         self.session.add(
             OutboxEvent(
                 event_type=DOCUMENT_VERSION_INGESTION_REQUESTED,
@@ -203,6 +206,8 @@ class DocumentService:
             )
         )
         version.status = DocumentVersionStatus.QUEUED
+        version.processing_stage = DocumentVersionStatus.QUEUED
+        version.retry_count += 1
         version.failure_code = None
         version.failure_message = None
         version.processing_started_at = None
@@ -213,6 +218,20 @@ class DocumentService:
 
         if document.current_version_number == version.version_number:
             document.status = DocumentStatus.QUEUED
+
+        AuditService(self.session).record(
+            organization_id=document.organization_id,
+            event_type=AuditEventType.DOCUMENT_INGESTION_RETRIED,
+            resource_type="document_version",
+            resource_id=version.id,
+            actor_user_id=actor_user_id,
+            outcome="succeeded",
+            details={
+                "document_id": str(document.id),
+                "previous_failure_code": previous_failure_code,
+                "retry_count": version.retry_count,
+            },
+        )
 
         # The retry transition and durable job request must commit together.
         self.session.commit()

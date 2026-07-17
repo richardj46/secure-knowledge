@@ -7,6 +7,7 @@ from secure_knowledge_api.dependencies.database import DatabaseSession
 from secure_knowledge_core.auth.exceptions import InvalidTokenError
 from secure_knowledge_core.auth.repository import UserRepository
 from secure_knowledge_core.auth.tokens import decode_access_token
+from secure_knowledge_core.core.tracing import set_span_attributes, start_span
 from secure_knowledge_core.database.models import User
 
 oauth2_scheme = OAuth2PasswordBearer(
@@ -26,17 +27,19 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    try:
-        token_payload = decode_access_token(token)
-    except InvalidTokenError as exc:
-        raise credentials_exception from exc
+    with start_span("auth.resolve_user") as span:
+        try:
+            token_payload = decode_access_token(token)
+        except InvalidTokenError as exc:
+            raise credentials_exception from exc
 
-    user = UserRepository(session).get_by_id(token_payload.sub)
+        user = UserRepository(session).get_by_id(token_payload.sub)
 
-    if user is None:
-        raise credentials_exception
+        if user is None:
+            raise credentials_exception
 
-    return user
+        set_span_attributes(span, {"user_id": user.id})
+        return user
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]

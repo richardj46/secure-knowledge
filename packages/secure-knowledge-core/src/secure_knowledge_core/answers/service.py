@@ -28,6 +28,7 @@ from secure_knowledge_core.conversations.repository import (
     ConversationRepository,
 )
 from secure_knowledge_core.core.settings import get_settings
+from secure_knowledge_core.core.tracing import set_span_attributes, start_span
 from secure_knowledge_core.database.enums import (
     Answerability,
     AnswerGenerationStatus,
@@ -55,6 +56,7 @@ from secure_knowledge_core.llm.pricing import CostCalculator
 from secure_knowledge_core.retrieval.authorization import RetrievalAuthorization
 from secure_knowledge_core.retrieval.schemas import RetrievalSearchRequest
 from secure_knowledge_core.retrieval.service import RetrievalService
+from secure_knowledge_core.retrieval.tracing import mark_selected_context
 from secure_knowledge_core.versioning import (
     ANSWER_PROMPT_VERSION,
     AUTHORIZATION_POLICY_VERSION,
@@ -146,21 +148,34 @@ class AnswerService:
                 ],
             )
 
-            return self._persist_success(
-                organization_id=organization_id,
-                user_id=user_id,
-                conversation=conversation,
-                retrieval_run_id=retrieval.retrieval_run_id,
-                generated=generated,
-                passages=[],
-                provider_name=None,
-                model_name=None,
-                provider_request_id=None,
-                usage=None,
-                estimated_cost_microusd=None,
-                duration_ms=0,
-                execution_mode=self.execution_mode,
-            )
+            with start_span(
+                "answer.persist",
+                {
+                    "organization_id": organization_id,
+                    "retrieval_run_id": retrieval.retrieval_run_id,
+                    "chunk_count": 0,
+                },
+            ) as persist_span:
+                response = self._persist_success(
+                    organization_id=organization_id,
+                    user_id=user_id,
+                    conversation=conversation,
+                    retrieval_run_id=retrieval.retrieval_run_id,
+                    generated=generated,
+                    passages=[],
+                    provider_name=None,
+                    model_name=None,
+                    provider_request_id=None,
+                    usage=None,
+                    estimated_cost_microusd=None,
+                    duration_ms=0,
+                    execution_mode=self.execution_mode,
+                )
+                set_span_attributes(
+                    persist_span,
+                    {"answer_run_id": response.answer_run_id},
+                )
+                return response
 
         passages = [
             ContextPassage(
@@ -173,15 +188,53 @@ class AnswerService:
             )
             for result in retrieval.results
         ]
-        selected_passages = self.context_selector.select(passages)
+        with start_span(
+            "answer.context_select",
+            {
+                "organization_id": organization_id,
+                "retrieval_run_id": retrieval.retrieval_run_id,
+                "chunk_count": len(passages),
+            },
+        ) as context_span:
+            selected_passages = self.context_selector.select(passages)
+            set_span_attributes(
+                context_span,
+                {"chunk_count": len(selected_passages)},
+            )
+        mark_selected_context(
+            session=self.session,
+            retrieval_run_id=retrieval.retrieval_run_id,
+            chunk_ids={passage.chunk_id for passage in selected_passages},
+        )
+        self.session.commit()
 
         started_at = perf_counter()
 
         try:
-            provider_result = self.answer_provider.generate_answer(
-                question=request.question,
-                context=selected_passages,
-            )
+            with start_span(
+                "answer.generate",
+                {
+                    "organization_id": organization_id,
+                    "retrieval_run_id": retrieval.retrieval_run_id,
+                    "model": self._answer_provider_name(),
+                    "chunk_count": len(selected_passages),
+                },
+            ) as generate_span:
+                provider_result = self.answer_provider.generate_answer(
+                    question=request.question,
+                    context=selected_passages,
+                )
+                set_span_attributes(
+                    generate_span,
+                    {
+                        "model": provider_result.model_name,
+                        "token_count": (
+                            provider_result.usage.total_tokens
+                            if provider_result.usage is not None
+                            else None
+                        ),
+                    },
+                )
         except LLMProviderError as exc:
             duration_ms = int((perf_counter() - started_at) * 1000)
             self.session.rollback()
@@ -205,10 +258,18 @@ class AnswerService:
             passage.chunk_id for passage in selected_passages
         }
         try:
-            validate_generated_answer(
-                generated=generated,
-                allowed_chunk_ids=allowed_chunk_ids,
-            )
+            with start_span(
+                "answer.validate_citations",
+                {
+                    "organization_id": organization_id,
+                    "retrieval_run_id": retrieval.retrieval_run_id,
+                    "chunk_count": len(allowed_chunk_ids),
+                },
+            ):
+                validate_generated_answer(
+                    generated=generated,
+                    allowed_chunk_ids=allowed_chunk_ids,
+                )
         except CitationValidationError:
             self.session.rollback()
             try:
@@ -232,21 +293,40 @@ class AnswerService:
                 usage=provider_result.usage,
             )
 
-        return self._persist_success(
-            organization_id=organization_id,
-            user_id=user_id,
-            conversation=conversation,
-            retrieval_run_id=retrieval.retrieval_run_id,
-            generated=generated,
-            passages=selected_passages,
-            provider_name=self._answer_provider_id(),
-            model_name=provider_result.model_name,
-            provider_request_id=provider_result.provider_request_id,
-            usage=provider_result.usage,
-            estimated_cost_microusd=estimated_cost_microusd,
-            duration_ms=duration_ms,
-            execution_mode=self.execution_mode,
-        )
+        with start_span(
+            "answer.persist",
+            {
+                "organization_id": organization_id,
+                "retrieval_run_id": retrieval.retrieval_run_id,
+                "model": provider_result.model_name,
+                "chunk_count": len(selected_passages),
+                "token_count": (
+                    provider_result.usage.total_tokens
+                    if provider_result.usage is not None
+                    else None
+                ),
+            },
+        ) as persist_span:
+            response = self._persist_success(
+                organization_id=organization_id,
+                user_id=user_id,
+                conversation=conversation,
+                retrieval_run_id=retrieval.retrieval_run_id,
+                generated=generated,
+                passages=selected_passages,
+                provider_name=self._answer_provider_id(),
+                model_name=provider_result.model_name,
+                provider_request_id=provider_result.provider_request_id,
+                usage=provider_result.usage,
+                estimated_cost_microusd=estimated_cost_microusd,
+                duration_ms=duration_ms,
+                execution_mode=self.execution_mode,
+            )
+            set_span_attributes(
+                persist_span,
+                {"answer_run_id": response.answer_run_id},
+            )
+            return response
 
     def _resolve_conversation(
         self,
@@ -327,6 +407,7 @@ class AnswerService:
             authorization_policy_version=AUTHORIZATION_POLICY_VERSION,
             answerability=generated.answerability,
             confidence=generated.confidence,
+            limitations=generated.limitations,
             input_tokens=usage.input_tokens if usage is not None else None,
             output_tokens=(
                 usage.output_tokens if usage is not None else None
@@ -397,31 +478,47 @@ class AnswerService:
         generation_duration_ms: int,
         execution_mode: ExecutionMode,
     ) -> None:
-        answer_run = AnswerRun(
-            execution_mode=execution_mode,
-            organization_id=organization_id,
-            user_id=user_id,
-            conversation_id=conversation_id,
-            retrieval_run_id=retrieval_run_id,
-            provider=self._answer_provider_id(),
-            status=AnswerGenerationStatus.FAILED,
-            model_name=self._answer_provider_name(),
-            answer_prompt_version=ANSWER_PROMPT_VERSION,
-            grader_prompt_version=GROUNDEDNESS_GRADER_VERSION,
-            answer_model=self._answer_provider_name(),
-            embedding_model=self._embedding_model_for_run(retrieval_run_id),
-            reranker_model=get_settings().reranker_model,
-            chunking_version=CHUNKING_VERSION,
-            retrieval_configuration_version=(
-                RETRIEVAL_CONFIGURATION_VERSION
-            ),
-            authorization_policy_version=AUTHORIZATION_POLICY_VERSION,
-            failure_code=failure_code,
-            generation_duration_ms=generation_duration_ms,
-            completed_at=datetime.now(UTC),
-        )
-        self.answers.add_run(answer_run)
-        self.session.commit()
+        with start_span(
+            "answer.persist",
+            {
+                "organization_id": organization_id,
+                "retrieval_run_id": retrieval_run_id,
+                "model": self._answer_provider_name(),
+                "status": "failed",
+            },
+        ) as persist_span:
+            answer_run = AnswerRun(
+                execution_mode=execution_mode,
+                organization_id=organization_id,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                retrieval_run_id=retrieval_run_id,
+                provider=self._answer_provider_id(),
+                status=AnswerGenerationStatus.FAILED,
+                model_name=self._answer_provider_name(),
+                answer_prompt_version=ANSWER_PROMPT_VERSION,
+                grader_prompt_version=GROUNDEDNESS_GRADER_VERSION,
+                answer_model=self._answer_provider_name(),
+                embedding_model=self._embedding_model_for_run(
+                    retrieval_run_id
+                ),
+                reranker_model=get_settings().reranker_model,
+                chunking_version=CHUNKING_VERSION,
+                retrieval_configuration_version=(
+                    RETRIEVAL_CONFIGURATION_VERSION
+                ),
+                authorization_policy_version=AUTHORIZATION_POLICY_VERSION,
+                failure_code=failure_code,
+                generation_duration_ms=generation_duration_ms,
+                completed_at=datetime.now(UTC),
+            )
+            self.answers.add_run(answer_run)
+            self.session.flush()
+            set_span_attributes(
+                persist_span,
+                {"answer_run_id": answer_run.id},
+            )
+            self.session.commit()
 
     def _embedding_model_for_run(self, retrieval_run_id: UUID) -> str:
         retrieval_run = self.session.get(RetrievalRun, retrieval_run_id)
